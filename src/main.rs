@@ -17,7 +17,7 @@ use egui_extras::*;
 fn main() -> Result<(), eframe::Error> {
     //env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([850.0, 400.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([600.0, 300.0]),
         ..Default::default()
     };
     eframe::run_native("进制转换", options, Box::new(|cc| Box::new(App::new(cc))))
@@ -62,9 +62,9 @@ impl eframe::App for App {
             self.base16_2(ui);
             self.basef32_32(ui);
             self.base32_f32(ui);
-            ui.image(egui::include_image!(
-                "./ferris.png"
-            ));
+            ui.centered_and_justified(|ui| {
+                ui.image(include_image!("./rust.svg"));
+            });
         });
     }
 }
