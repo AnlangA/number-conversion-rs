@@ -13,6 +13,7 @@ use basef32_32::*;
 use data::*;
 use eframe::egui;
 use egui::*;
+use egui_extras::*;
 fn main() -> Result<(), eframe::Error> {
     //env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
@@ -32,6 +33,7 @@ struct App {
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         setup_custom_fonts(&cc.egui_ctx);
+        install_image_loaders(&cc.egui_ctx);
         Self {
             base2_16: Data::new(),
             base16_2: Data::new(),
@@ -60,6 +62,9 @@ impl eframe::App for App {
             self.base16_2(ui);
             self.basef32_32(ui);
             self.base32_f32(ui);
+            ui.image(egui::include_image!(
+                "./ferris.png"
+            ));
         });
     }
 }
