@@ -63,7 +63,7 @@ impl eframe::App for App {
             self.basef32_32(ui);
             self.base32_f32(ui);
             ui.centered_and_justified(|ui| {
-                ui.image(include_image!("./rust.svg"));
+                ui.image(include_image!("./picture/rust_zh.png"));
             });
         });
     }
