@@ -1,0 +1,9 @@
+[package]
+name = "base_conversion"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.27.0"
+env_logger = "0.11.3"
+num = "0.4.3"
