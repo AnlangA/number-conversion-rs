@@ -6,7 +6,7 @@ pub fn basef32_32(data: &mut Data, ui: &mut Ui) {
     data.set_data_error(DataError::Nice);
     let mut input_data : f32 = 0.0;
     ui.horizontal(|ui| {
-        ui.label(RichText::from("输入f32的16进制数编码").color(Color32::BLUE)).on_hover_text("可输入下划线做视觉分割");
+        ui.label(RichText::from("输入f32数据").color(Color32::BLUE)).on_hover_text("可输入下划线做视觉分割");
         let text_edit = TextEdit::singleline(&mut data.input_data)
         .desired_width(400.0);
         ui.add(text_edit);
