@@ -27,17 +27,37 @@ impl Data {
     }
     pub fn get_output_data(&self) -> String {
         let mut result = String::new();
-        let reversed: String = self.output_data.chars().rev().collect();
-
-        for (i, c) in reversed.chars().enumerate() {
-            if i > 0 && i % 4 == 0 {
-                result.push('_');
+        let mut result_before_dot = String::new();
+        if let Some(dot_pos) = self.output_data.find('.') {
+            let (before_dot, after_dot) = self.output_data.split_at(dot_pos);
+            //反转小数点前部分的字符串，用于插入下划线
+            let reversed_before: String = before_dot.chars().rev().collect();
+            for (i, c) in reversed_before.chars().enumerate() {
+                if i > 0 && i % 4 == 0 {
+                    result_before_dot.push('_');
+                }
+                result_before_dot.push(c);
             }
-            result.push(c);
+            //反转回来
+            result_before_dot = result_before_dot.chars().rev().collect();
+            let result_after_dot = after_dot.to_string();
+            result = format!("{}{}", result_before_dot, result_after_dot);
+        } else {
+            //反转字符串，用于插入下划线
+            let reversed: String = self.output_data.chars().rev().collect();
+            for (i, c) in reversed.chars().enumerate() {
+                if i > 0 && i % 4 == 0 {
+                    result.push('_');
+                }
+                result.push(c);
+            }
+    
+            // Reversing the result to get the final string
+            result = result.chars().rev().collect();
         }
-
-        result.chars().rev().collect()
+        result
     }
+    
 
     pub fn get_data_error(&self) -> &DataError {
         &self.data_error
