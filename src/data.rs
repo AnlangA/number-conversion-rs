@@ -51,8 +51,7 @@ impl Data {
                 }
                 result.push(c);
             }
-    
-            // Reversing the result to get the final string
+            //反转回来
             result = result.chars().rev().collect();
         }
         result
