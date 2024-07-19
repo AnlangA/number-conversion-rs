@@ -1,13 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-mod base2_16;
-mod base16_2;
+mod base2;
+mod base10;
+mod base16;
 mod base32_f32;
 mod basef32_32;
 mod data;
 
-use base2_16::*;
-use base16_2::*;
+use base2::*;
+use base10::*;
+use base16::*;
 use base32_f32::*;
 use basef32_32::*;
 use data::*;
@@ -24,8 +26,9 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 struct App {
-    base2_16: Data,
-    base16_2: Data,
+    base2: Data,
+    base10: Data,
+    base16: Data,
     base32_f32: Data,
     basef32_32: Data,
 }
@@ -35,17 +38,21 @@ impl App {
         setup_custom_fonts(&cc.egui_ctx);
         install_image_loaders(&cc.egui_ctx);
         Self {
-            base2_16: Data::new(),
-            base16_2: Data::new(),
+            base2: Data::new(),
+            base10: Data::new(),
+            base16: Data::new(),
             base32_f32: Data::new(),
             basef32_32: Data::new(),
         }
     }
-    fn base2_16(&mut self, ui: &mut Ui) {
-        base2_16(&mut self.base2_16, ui);
+    fn base2(&mut self, ui: &mut Ui) {
+        base2(&mut self.base2, ui);
     }
-    fn base16_2(&mut self, ui: &mut Ui) {
-        base16_2(&mut self.base16_2, ui);
+    fn base10(&mut self, ui: &mut Ui){
+        base10(&mut self.base10, ui);
+    }
+    fn base16(&mut self, ui: &mut Ui) {
+        base16(&mut self.base16, ui);
     }
     fn base32_f32(&mut self, ui: &mut Ui) {
         base32_f32(&mut self.base32_f32, ui);
@@ -58,8 +65,9 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.base2_16(ui);
-            self.base16_2(ui);
+            self.base2(ui);
+            self.base10(ui);
+            self.base16(ui);
             self.basef32_32(ui);
             self.base32_f32(ui);
             ui.centered_and_justified(|ui| {

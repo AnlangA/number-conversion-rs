@@ -3,7 +3,7 @@ use eframe::egui;
 use egui::*;
 use num::BigUint;
 
-pub fn base16_2(data: &mut Data, ui: &mut Ui) {
+pub fn base16(data: &mut Data, ui: &mut Ui) {
     data.set_data_error(DataError::Nice);
     let mut input_data = String::new();
     ui.horizontal(|ui| {
@@ -42,7 +42,12 @@ pub fn base16_2(data: &mut Data, ui: &mut Ui) {
                     let number_data = u64::from_str_radix(&input_data, 16).unwrap();
                     let string_data = BigUint::from(number_data).to_str_radix(2);
                     data.set_output_data(string_data);
-                    ui.add(Label::new(RichText::new("2进制数").color(Color32::BLUE)));
+                    ui.add(Label::new(RichText::new("2进制数:").color(Color32::BLUE)));
+                    ui.monospace(data.get_output_data());
+                    ui.separator();
+                    let string_data = BigUint::from(number_data).to_str_radix(10);
+                    data.set_output_data(string_data);
+                    ui.add(Label::new(RichText::new("10进制数:").color(Color32::BLUE)));
                     ui.monospace(data.get_output_data())
             }
         }
