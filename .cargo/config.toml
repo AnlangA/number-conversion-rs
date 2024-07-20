@@ -1,2 +1,5 @@
 [build]
 jobs = 8
+
+[alias]
+br = "build --release"
