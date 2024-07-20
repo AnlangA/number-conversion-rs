@@ -60,6 +60,12 @@ impl App {
     fn basef32_32(&mut self, ui: &mut Ui) {
         basef32_32(&mut self.basef32_32, ui);
     }
+    fn github_link(&self, ctx: &egui::Context){
+        egui::TopBottomPanel::bottom("链接")
+            .show(ctx, |ui|{
+                ui.add(egui::Hyperlink::from_label_and_url("😄 源码仓库", "https://github.com/AnlangA/number-conversion-rs"));
+            });
+    }
 }
 
 impl eframe::App for App {
@@ -73,35 +79,30 @@ impl eframe::App for App {
             ui.centered_and_justified(|ui| {
                 ui.image(include_image!("./picture/rust_zh.png"));
             });
+            self.github_link(ctx);
         });
     }
 }
 
 fn setup_custom_fonts(ctx: &egui::Context) {
-    // Start with the default fonts (we will be adding to them rather than replacing them).
     let mut fonts = egui::FontDefinitions::default();
 
-    // Install my own font (maybe supporting non-latin characters).
-    // .ttf and .otf files supported.
     fonts.font_data.insert(
         "Song".to_owned(),
         egui::FontData::from_static(include_bytes!("./STSong.ttf")),
     );
 
-    // Put my font first (highest priority) for proportional text:
     fonts
         .families
         .entry(egui::FontFamily::Proportional)
         .or_default()
         .insert(0, "Song".to_owned());
 
-    // Put my font as last fallback for monospace:
     fonts
         .families
         .entry(egui::FontFamily::Monospace)
         .or_default()
         .push("Song".to_owned());
 
-    // Tell egui to use these fonts:
     ctx.set_fonts(fonts);
 }
