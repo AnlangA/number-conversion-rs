@@ -6,6 +6,7 @@ mod base16;
 mod base32_f32;
 mod basef32_32;
 mod data;
+mod hex_ascii;
 
 use base2::*;
 use base10::*;
@@ -13,6 +14,7 @@ use base16::*;
 use base32_f32::*;
 use basef32_32::*;
 use data::*;
+use hex_ascii::*;
 use eframe::egui;
 use egui::*;
 use egui_extras::*;
@@ -31,6 +33,7 @@ struct App {
     base16: Data,
     base32_f32: Data,
     basef32_32: Data,
+    hex_ascii: Data,
 }
 
 impl App {
@@ -43,6 +46,7 @@ impl App {
             base16: Data::new(),
             base32_f32: Data::new(),
             basef32_32: Data::new(),
+            hex_ascii: Data::new(),
         }
     }
     fn base2(&mut self, ui: &mut Ui) {
@@ -60,6 +64,9 @@ impl App {
     fn basef32_32(&mut self, ui: &mut Ui) {
         basef32_32(&mut self.basef32_32, ui);
     }
+    fn hex_ascii(&mut self, ui: &mut Ui) {
+        hex_ascii(&mut self.hex_ascii, ui);
+    }
     fn github_link(&self, ctx: &egui::Context){
         egui::TopBottomPanel::bottom("链接")
             .show(ctx, |ui|{
@@ -76,6 +83,7 @@ impl eframe::App for App {
             self.base16(ui);
             self.basef32_32(ui);
             self.base32_f32(ui);
+            self.hex_ascii(ui);
             ui.centered_and_justified(|ui| {
                 ui.image(include_image!("./picture/rust_zh.png"));
             });
