@@ -183,4 +183,41 @@ mod tests {
         let result = hex_to_ascii("21222324252627").unwrap(); // !"#$%&'
         assert_eq!(result, "!\"#$%&'");
     }
+
+    #[test]
+    fn test_hex_to_ascii_debug() {
+        // 详细调试测试
+        println!("测试开始...");
+        
+        // 测试简单的"A"
+        let test_cases = vec![
+            ("41", "A"),
+            ("48656C6C6F", "Hello"),
+            ("48656C6C6F20576F726C64", "Hello World"),
+            ("313233", "123"),
+            ("0A", "\n"),
+            ("09", "\t"),
+            ("20", " "),
+            ("7F", "?"), // DEL字符应该被替换
+            ("80", "?"), // 非ASCII字符
+        ];
+
+        for (hex_input, expected) in test_cases {
+            println!("测试输入: {} -> 期望: {:?}", hex_input, expected);
+            match hex_to_ascii(hex_input) {
+                Ok(result) => {
+                    println!("实际结果: {:?}", result);
+                    if result != expected {
+                        println!("❌ 不匹配! 期望: {:?}, 实际: {:?}", expected, result);
+                    } else {
+                        println!("✅ 匹配!");
+                    }
+                }
+                Err(e) => {
+                    println!("❌ 错误: {}", e);
+                }
+            }
+            println!("---");
+        }
+    }
 } 
