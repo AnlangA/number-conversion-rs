@@ -36,15 +36,11 @@ pub fn ascii_hex(data: &mut Data, ui: &mut Ui) {
 
                 // 显示字节数统计
                 let byte_count = input_data.len();
-                ui.add(Label::new(
-                    RichText::new("字节数:").color(Color32::GRAY),
-                ));
+                ui.add(Label::new(RichText::new("字节数:").color(Color32::GRAY)));
                 ui.monospace(format!("{} bytes", byte_count));
 
                 // 显示格式化的十六进制（带空格分隔）
-                ui.add(Label::new(
-                    RichText::new("格式化:").color(Color32::GRAY),
-                ));
+                ui.add(Label::new(RichText::new("格式化:").color(Color32::GRAY)));
                 let formatted_hex = format_hex_with_spaces(&hex_string);
                 ui.monospace(&formatted_hex);
             }

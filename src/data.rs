@@ -20,7 +20,7 @@ impl Data {
             data_error: DataError::Nice,
         }
     }
-    pub fn ref_input_data(&mut self) -> &mut String{
+    pub fn ref_input_data(&mut self) -> &mut String {
         &mut self.input_data
     }
     pub fn set_output_data(&mut self, output_data: String) {
@@ -57,7 +57,6 @@ impl Data {
         }
         result
     }
-    
 
     pub fn get_data_error(&self) -> &DataError {
         &self.data_error

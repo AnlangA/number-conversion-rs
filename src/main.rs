@@ -28,7 +28,7 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default().with_inner_size([600.0, 400.0]),
         ..Default::default()
     };
-    eframe::run_native("进制转换", options, Box::new(|cc| Box::new(App::new(cc))))
+    eframe::run_native("编码转换", options, Box::new(|cc| Box::new(App::new(cc))))
 }
 
 struct App {

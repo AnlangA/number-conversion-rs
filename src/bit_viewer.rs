@@ -23,9 +23,10 @@ impl BitViewerData {
 
     pub fn update_from_hex(&mut self) {
         self.data_error = DataError::Nice;
-        
+
         // 清理十六进制输入（移除空格和下划线）
-        let clean_hex = self.hex_input
+        let clean_hex = self
+            .hex_input
             .replace(" ", "")
             .replace("_", "")
             .to_uppercase();
@@ -55,7 +56,7 @@ impl BitViewerData {
 
     pub fn parse_field_widths(&mut self) {
         self.parsed_field_widths.clear();
-        
+
         if self.field_widths.trim().is_empty() {
             return;
         }
@@ -83,7 +84,7 @@ impl BitViewerData {
         }
 
         let mut hex_string = String::new();
-        
+
         // 确保位数是4的倍数（补零）
         let mut bits = self.binary_bits.clone();
         while bits.len() % 4 != 0 {
@@ -106,17 +107,28 @@ impl BitViewerData {
 }
 
 pub fn bit_viewer(data: &mut BitViewerData, ui: &mut Ui) {
-
     // 固定的输入区域（不滚动）
     ui.horizontal(|ui| {
         ui.label(RichText::from("十六进制数据:").color(Color32::BLUE));
         let response = ui.add(
             TextEdit::singleline(&mut data.hex_input)
                 .desired_width(300.0)
-                .hint_text("输入十六进制数据，如: A1B2C3")
+                .hint_text("输入十六进制数据，如: A1B2C3"),
         );
 
         if response.changed() {
+            data.update_from_hex();
+        }
+
+        // 添加清除按钮
+        if ui.button("清除").clicked() {
+            data.hex_input.clear();
+            data.binary_bits.clear();
+        }
+
+        // 添加示例按钮
+        if ui.button("示例").clicked() {
+            data.hex_input = "A1B2C3D4".to_string();
             data.update_from_hex();
         }
     });
@@ -127,7 +139,7 @@ pub fn bit_viewer(data: &mut BitViewerData, ui: &mut Ui) {
         let response = ui.add(
             TextEdit::singleline(&mut data.field_widths)
                 .desired_width(300.0)
-                .hint_text("输入字段位数，用空格分隔，如: 4 8 4")
+                .hint_text("输入字段位数，用空格分隔，如: 4 8 4"),
         );
 
         if response.changed() {
@@ -160,19 +172,24 @@ pub fn bit_viewer(data: &mut BitViewerData, ui: &mut Ui) {
     // 计算字段分组
     let field_groups = calculate_field_groups(&data.binary_bits, &data.parsed_field_widths);
 
-    // 创建滚动区域来显示所有字段
+    // 计算可用的滚动区域高度
+    let available_height = ui.available_height();
+    // 为输入区域和间距预留空间，剩余空间用于滚动区域
+    let scroll_height = (available_height - 120.0).max(200.0); // 最小200px，为输入区域预留120px
+
+    // 创建自适应的滚动区域来显示所有内容
     egui::ScrollArea::vertical()
-        .max_height(400.0) // 设置最大高度，超过后显示滚动条
+        .max_height(scroll_height) // 动态设置高度
         .auto_shrink([false; 2]) // 不自动收缩
         .show(ui, |ui| {
             // 在滚动区域内显示所有字段
             display_bit_fields(data, ui, &field_groups);
+
+            ui.separator();
+
+            // 统计信息也放在滚动区域内
+            display_statistics(data, ui);
         });
-
-    ui.separator();
-
-    // 统计信息（固定在底部，不滚动）
-    display_statistics(data, ui);
 }
 
 fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usize]) {
@@ -186,19 +203,24 @@ fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usi
         // 显示字段标签和十六进制值
         ui.horizontal(|ui| {
             if !data.parsed_field_widths.is_empty() {
-                ui.label(RichText::from(format!("字段{}({} bits)", group_index + 1, group_size))
-                    .color(Color32::GRAY)
-                    .size(10.0));
+                ui.label(
+                    RichText::from(format!("字段{}({} bits)", group_index + 1, group_size))
+                        .color(Color32::GRAY)
+                        .size(10.0),
+                );
             }
 
             // 添加一些间距，但不要太远
             ui.add_space(20.0);
 
             // 计算该字段的十六进制值
-            let field_hex_value = calculate_field_hex_value(&data.binary_bits, bit_index, *group_size);
-            ui.label(RichText::from(format!("0x{}", field_hex_value))
-                .color(Color32::BLUE)
-                .size(12.0));
+            let field_hex_value =
+                calculate_field_hex_value(&data.binary_bits, bit_index, *group_size);
+            ui.label(
+                RichText::from(format!("0x{}", field_hex_value))
+                    .color(Color32::BLUE)
+                    .size(12.0),
+            );
         });
 
         let field_start_bit = bit_index;
@@ -254,23 +276,35 @@ fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usi
                         if !response.is_pointer_button_down_on() {
                             // 顶部高光
                             painter.line_segment(
-                                [rect.left_top() + Vec2::new(2.0, 2.0), rect.right_top() + Vec2::new(-2.0, 2.0)],
+                                [
+                                    rect.left_top() + Vec2::new(2.0, 2.0),
+                                    rect.right_top() + Vec2::new(-2.0, 2.0),
+                                ],
                                 Stroke::new(1.5, highlight_color),
                             );
                             // 左侧高光
                             painter.line_segment(
-                                [rect.left_top() + Vec2::new(2.0, 2.0), rect.left_bottom() + Vec2::new(2.0, -2.0)],
+                                [
+                                    rect.left_top() + Vec2::new(2.0, 2.0),
+                                    rect.left_bottom() + Vec2::new(2.0, -2.0),
+                                ],
                                 Stroke::new(1.5, highlight_color),
                             );
                         }
 
                         // 绘制阴影效果（底部和右侧）
                         painter.line_segment(
-                            [rect.right_top() + Vec2::new(-2.0, 2.0), rect.right_bottom() + Vec2::new(-2.0, -2.0)],
+                            [
+                                rect.right_top() + Vec2::new(-2.0, 2.0),
+                                rect.right_bottom() + Vec2::new(-2.0, -2.0),
+                            ],
                             Stroke::new(1.5, shadow_color),
                         );
                         painter.line_segment(
-                            [rect.left_bottom() + Vec2::new(2.0, -2.0), rect.right_bottom() + Vec2::new(-2.0, -2.0)],
+                            [
+                                rect.left_bottom() + Vec2::new(2.0, -2.0),
+                                rect.right_bottom() + Vec2::new(-2.0, -2.0),
+                            ],
                             Stroke::new(1.5, shadow_color),
                         );
 
@@ -282,7 +316,11 @@ fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usi
                         );
 
                         // 绘制文字
-                        let text_color = if bit_value { Color32::WHITE } else { Color32::WHITE };
+                        let text_color = if bit_value {
+                            Color32::WHITE
+                        } else {
+                            Color32::WHITE
+                        };
                         painter.text(
                             rect.center(),
                             Align2::CENTER_CENTER,
@@ -397,12 +435,20 @@ fn calculate_field_hex_value(bits: &[bool], start_index: usize, field_size: usiz
         return "0".to_string();
     }
 
-    // 将位转换为数值
+    // 对于超过64位的字段，使用字符串拼接方式
+    if field_bits.len() > 64 {
+        return calculate_large_field_hex_value(field_bits);
+    }
+
+    // 将位转换为数值（64位以内）
     let mut value = 0u64;
     for (i, &bit) in field_bits.iter().enumerate() {
         if bit {
-            // 从高位开始，所以第一个位是最高位
-            value |= 1u64 << (field_bits.len() - 1 - i);
+            let shift_amount = field_bits.len() - 1 - i;
+            // 防止位移溢出
+            if shift_amount < 64 {
+                value |= 1u64 << shift_amount;
+            }
         }
     }
 
@@ -418,6 +464,38 @@ fn calculate_field_hex_value(bits: &[bool], start_index: usize, field_size: usiz
     }
 }
 
+// 处理超过64位的大字段
+fn calculate_large_field_hex_value(field_bits: &[bool]) -> String {
+    let mut hex_string = String::new();
+
+    // 将位按4位一组转换为十六进制
+    let mut temp_bits = field_bits.to_vec();
+
+    // 确保位数是4的倍数，前面补0
+    while temp_bits.len() % 4 != 0 {
+        temp_bits.insert(0, false);
+    }
+
+    // 每4位转换为一个十六进制字符
+    for chunk in temp_bits.chunks(4) {
+        let mut nibble_value = 0u8;
+        for (i, &bit) in chunk.iter().enumerate() {
+            if bit {
+                nibble_value |= 1u8 << (3 - i);
+            }
+        }
+        hex_string.push_str(&format!("{:X}", nibble_value));
+    }
+
+    // 移除前导零，但至少保留一个字符
+    let trimmed = hex_string.trim_start_matches('0');
+    if trimmed.is_empty() {
+        "0".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -427,7 +505,7 @@ mod tests {
         let mut data = BitViewerData::new();
         data.hex_input = "A1".to_string();
         data.update_from_hex();
-        
+
         // A1 = 10100001
         let expected = vec![true, false, true, false, false, false, false, true];
         assert_eq!(data.binary_bits, expected);
@@ -438,7 +516,7 @@ mod tests {
         let mut data = BitViewerData::new();
         data.binary_bits = vec![true, false, true, false, false, false, false, true];
         data.update_hex_from_bits();
-        
+
         assert_eq!(data.hex_input, "A1");
     }
 
@@ -447,10 +525,10 @@ mod tests {
         let mut data = BitViewerData::new();
         data.hex_input = "A0".to_string();
         data.update_from_hex();
-        
+
         // 切换最后一位
         data.toggle_bit(7);
-        
+
         assert_eq!(data.hex_input, "A1");
     }
 
@@ -512,6 +590,43 @@ mod tests {
 
         let bits = vec![false];
         let result = calculate_field_hex_value(&bits, 0, 1);
+        assert_eq!(result, "0");
+    }
+
+    #[test]
+    fn test_calculate_large_field_hex_value() {
+        // 测试超过64位的大字段
+        let mut bits = vec![false; 68]; // 68位全0
+        bits[0] = true; // 最高位设为1
+        let result = calculate_field_hex_value(&bits, 0, 68);
+        // 68位需要17个十六进制字符，最高位为1应该是8后面跟16个0
+        assert_eq!(result, "80000000000000000");
+
+        // 测试72位字段：前4位为1010，其余为0
+        let mut bits = vec![false; 72];
+        bits[0] = true;  // 1
+        bits[1] = false; // 0
+        bits[2] = true;  // 1
+        bits[3] = false; // 0
+        let result = calculate_field_hex_value(&bits, 0, 72);
+        assert_eq!(result, "A00000000000000000"); // A后面跟17个0
+    }
+
+    #[test]
+    fn test_large_field_hex_value_function() {
+        // 直接测试大字段处理函数
+        let bits = vec![true, false, true, false]; // 1010 = A
+        let result = calculate_large_field_hex_value(&bits);
+        assert_eq!(result, "A");
+
+        // 测试需要补位的情况
+        let bits = vec![true, false]; // 10，应该补成0010 = 2
+        let result = calculate_large_field_hex_value(&bits);
+        assert_eq!(result, "2");
+
+        // 测试全0的情况
+        let bits = vec![false, false, false, false];
+        let result = calculate_large_field_hex_value(&bits);
         assert_eq!(result, "0");
     }
 }
