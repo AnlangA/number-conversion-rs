@@ -6,6 +6,7 @@ mod base16;
 mod base2;
 mod base32_f32;
 mod basef32_32;
+mod bit_viewer;
 mod data;
 mod hex_ascii;
 
@@ -15,6 +16,7 @@ use base16::*;
 use base2::*;
 use base32_f32::*;
 use basef32_32::*;
+use bit_viewer::*;
 use data::*;
 use eframe::egui;
 use egui::*;
@@ -39,6 +41,7 @@ struct App {
     base32_f32: Data,
     basef32_32: Data,
     hex_ascii: Data,
+    bit_viewer: BitViewerData,
 }
 
 impl App {
@@ -54,6 +57,7 @@ impl App {
             base32_f32: Data::new(),
             basef32_32: Data::new(),
             hex_ascii: Data::new(),
+            bit_viewer: BitViewerData::new(),
         }
     }
     fn ascii_hex(&mut self, ui: &mut Ui) {
@@ -76,6 +80,9 @@ impl App {
     }
     fn hex_ascii(&mut self, ui: &mut Ui) {
         hex_ascii(&mut self.hex_ascii, ui);
+    }
+    fn bit_viewer(&mut self, ui: &mut Ui) {
+        bit_viewer(&mut self.bit_viewer, ui);
     }
     fn github_link(&self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("链接").show(ctx, |ui| {
@@ -100,6 +107,9 @@ impl eframe::App for App {
                 if ui.button("字符转换").clicked() {
                     self.page = 1;
                 }
+                if ui.button("bit查看").clicked() {
+                    self.page = 2;
+                }
             });
         });
 
@@ -115,10 +125,22 @@ impl eframe::App for App {
                     self.github_link(ctx);
                 });
             }
-            _ => {
+            1 => {
                 egui::CentralPanel::default().show(ctx, |ui| {
                     self.hex_ascii(ui);
                     self.ascii_hex(ui);
+                    self.github_link(ctx);
+                });
+            }
+            2 => {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    self.bit_viewer(ui);
+                    self.github_link(ctx);
+                });
+            }
+            _ => {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui.label("未知页面");
                     self.github_link(ctx);
                 });
             }
