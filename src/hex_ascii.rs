@@ -5,15 +5,17 @@ use egui::*;
 pub fn hex_ascii(data: &mut Data, ui: &mut Ui) {
     data.set_data_error(DataError::Nice);
     let mut input_data = String::new();
-    
+
     ui.horizontal(|ui| {
-        ui.label(RichText::from("Hex转ASCII").color(Color32::BLUE)).on_hover_text("输入十六进制字符串，自动转换为ASCII文本");
-        let text_edit = TextEdit::singleline(&mut data.input_data)
-            .desired_width(400.0);
+        ui.label(RichText::from("Hex转ASCII").color(Color32::BLUE))
+            .on_hover_text("输入十六进制字符串，自动转换为ASCII文本");
+        let text_edit = TextEdit::singleline(&mut data.input_data).desired_width(400.0);
         ui.add(text_edit);
 
         // 移除空格和下划线做视觉分割
-        let raw_data = data.ref_input_data().clone()
+        let raw_data = data
+            .ref_input_data()
+            .clone()
             .replace(" ", "")
             .replace("_", "");
 
@@ -36,10 +38,12 @@ pub fn hex_ascii(data: &mut Data, ui: &mut Ui) {
                 .collect();
         }
     });
-    
+
     ui.horizontal(|ui| {
         match data.get_data_error() {
-            DataError::FormatError => ui.colored_label(Color32::RED, "请输入有效的十六进制字符（长度必须为偶数）"),
+            DataError::FormatError => {
+                ui.colored_label(Color32::RED, "请输入有效的十六进制字符（长度必须为偶数）")
+            }
             DataError::LenNull => ui.colored_label(Color32::RED, "请输入十六进制数据"),
             DataError::LenOver => ui.colored_label(Color32::RED, "数据长度过长"),
             DataError::Nice => {
@@ -49,15 +53,18 @@ pub fn hex_ascii(data: &mut Data, ui: &mut Ui) {
                         ui.add(Label::new(RichText::new("ASCII文本:").color(Color32::BLUE)));
                         ui.monospace(&ascii_text);
                         ui.separator();
-                        
+
                         // 显示可打印字符统计
-                        let printable_count = ascii_text.chars().filter(|c| c.is_ascii_graphic() || *c == ' ').count();
-                        ui.add(Label::new(RichText::new("可打印字符数:").color(Color32::GRAY)));
+                        let printable_count = ascii_text
+                            .chars()
+                            .filter(|c| c.is_ascii_graphic() || *c == ' ')
+                            .count();
+                        ui.add(Label::new(
+                            RichText::new("可打印字符数:").color(Color32::GRAY),
+                        ));
                         ui.monospace(format!("{}/{}", printable_count, ascii_text.len()))
                     }
-                    Err(err) => {
-                        ui.colored_label(Color32::RED, format!("转换错误: {}", err))
-                    }
+                    Err(err) => ui.colored_label(Color32::RED, format!("转换错误: {}", err)),
                 }
             }
         };
@@ -68,23 +75,23 @@ fn hex_to_ascii(hex_string: &str) -> Result<String, String> {
     if hex_string.len() % 2 != 0 {
         return Err("十六进制字符串长度必须为偶数".to_string());
     }
-    
+
     let mut result = String::new();
-    
+
     for i in (0..hex_string.len()).step_by(2) {
-        let hex_pair = &hex_string[i..i+2];
+        let hex_pair = &hex_string[i..i + 2];
         match u8::from_str_radix(hex_pair, 16) {
             Ok(byte_value) => {
                 // 将字节转换为字符，如果不是可打印字符则显示为替代字符
                 if byte_value.is_ascii() {
                     let ch = byte_value as char;
                     if ch.is_ascii_control() && ch != '\n' && ch != '\t' && ch != '\r' {
-                        result.push('.');  // 用点号表示控制字符
+                        result.push('.'); // 用点号表示控制字符
                     } else {
                         result.push(ch);
                     }
                 } else {
-                    result.push('?');  // 用问号表示非ASCII字符
+                    result.push('?'); // 用问号表示非ASCII字符
                 }
             }
             Err(_) => {
@@ -92,7 +99,7 @@ fn hex_to_ascii(hex_string: &str) -> Result<String, String> {
             }
         }
     }
-    
+
     Ok(result)
 }
 
@@ -188,7 +195,7 @@ mod tests {
     fn test_hex_to_ascii_debug() {
         // 详细调试测试
         println!("测试开始...");
-        
+
         // 测试简单的"A"
         let test_cases = vec![
             ("41", "A"),
@@ -220,4 +227,4 @@ mod tests {
             println!("---");
         }
     }
-} 
+}
