@@ -163,7 +163,7 @@ mod tests {
     fn test_ascii_to_hex_mixed_content() {
         // 测试混合内容
         let result = ascii_to_hex("A1!@");
-        assert_eq!(result, "4131214021");
+        assert_eq!(result, "41312140");
     }
 
     #[test]
