@@ -1,7 +1,15 @@
 [package]
 name = "number_conversion"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+authors = ["AnlangA <70180737+AnlangA@users.noreply.github.com>"]
+description = "一个用Rust和egui构建的跨平台编码转换工具，支持多种进制转换、文本编码转换和位操作查看"
+homepage = "https://github.com/AnlangA/number-conversion-rs"
+repository = "https://github.com/AnlangA/number-conversion-rs"
+license = "MIT"
+keywords = ["encoding", "conversion", "gui", "egui", "binary"]
+categories = ["command-line-utilities", "gui", "encoding"]
+readme = "README.md"
 
 [dependencies]
 eframe = "0.32.0"

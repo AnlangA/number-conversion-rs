@@ -1,0 +1,39 @@
+# 编码转换工具默认配置文件
+
+[app]
+title = "编码转换工具"
+version = "0.2.0"
+
+[window]
+width = 900.0
+height = 700.0
+resizable = true
+maximized = false
+
+[ui]
+theme = "light"  # light, dark, auto
+font_size = 14.0
+show_tooltips = true
+
+[features]
+enable_logging = false
+auto_save_settings = true
+show_statistics = true
+
+[conversion]
+# 默认进制转换设置
+default_input_format = "hex"
+auto_format_output = true
+show_separators = true
+
+[bit_viewer]
+# 位查看器默认设置
+default_field_widths = "4 4 4 4 4 4 4 4"
+show_bit_positions = true
+highlight_changes = true
+
+[advanced]
+# 高级设置
+max_input_length = 1024
+conversion_timeout_ms = 5000
+enable_experimental_features = false
