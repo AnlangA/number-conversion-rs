@@ -268,7 +268,7 @@ fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usi
                         // 绘制按钮背景
                         painter.rect_filled(
                             rect.shrink(1.0),
-                            Rounding::same(3.0), // 缩小圆角
+                            egui::CornerRadius::same(3), // 缩小圆角
                             current_base_color,
                         );
 
@@ -311,8 +311,9 @@ fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usi
                         // 绘制边框
                         painter.rect_stroke(
                             rect.shrink(0.5),
-                            Rounding::same(3.0), // 缩小圆角
+                            egui::CornerRadius::same(3), // 缩小圆角
                             Stroke::new(1.0, Color32::from_gray(100)),
+                            egui::StrokeKind::Outside,
                         );
 
                         // 绘制文字
@@ -333,8 +334,9 @@ fn display_bit_fields(data: &mut BitViewerData, ui: &mut Ui, field_groups: &[usi
                         if response.hovered() {
                             painter.rect_stroke(
                                 rect.shrink(-1.0),
-                                Rounding::same(4.0), // 缩小圆角
+                                egui::CornerRadius::same(4), // 缩小圆角
                                 Stroke::new(1.5, Color32::from_rgb(255, 255, 100)), // 缩小边框宽度
+                                egui::StrokeKind::Outside,
                             );
                         }
                     }

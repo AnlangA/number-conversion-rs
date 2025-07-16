@@ -28,7 +28,7 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default().with_inner_size([600.0, 400.0]),
         ..Default::default()
     };
-    eframe::run_native("编码转换", options, Box::new(|cc| Box::new(App::new(cc))))
+    eframe::run_native("编码转换", options, Box::new(|cc| Ok(Box::new(App::new(cc)))))
 }
 
 struct App {
@@ -153,7 +153,7 @@ fn setup_custom_fonts(ctx: &egui::Context) {
 
     fonts.font_data.insert(
         "Song".to_owned(),
-        egui::FontData::from_static(include_bytes!("./STSong.ttf")),
+        std::sync::Arc::new(egui::FontData::from_static(include_bytes!("./STSong.ttf"))),
     );
 
     fonts
