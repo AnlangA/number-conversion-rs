@@ -99,11 +99,15 @@ impl BitViewerPage {
             let field_start_bit = bit_index;
             let actual_group_size = group_size.min(self.data.binary_bits().len() - bit_index);
 
-            // 显示字段标题
+            // 显示字段标题和数值
             let field_title = if field_index < configured_fields_count {
-                format!("字段 {} ({} 位):", field_index + 1, actual_group_size)
+                let field_value = self.calculate_field_value(field_start_bit, actual_group_size);
+                format!("字段 {} ({} 位): 0x{:X} {}", 
+                    field_index + 1, actual_group_size, field_value, field_value)
             } else {
-                format!("剩余位 ({} 位):", actual_group_size)
+                let field_value = self.calculate_field_value(field_start_bit, actual_group_size);
+                format!("剩余位 ({} 位): 0x{:X} {}", 
+                    actual_group_size, field_value, field_value)
             };
 
             ui.label(RichText::new(field_title).color(Color32::DARK_BLUE));
@@ -273,6 +277,19 @@ impl BitViewerPage {
             });
         }
     }
+
+    /// 计算指定字段的数值
+    fn calculate_field_value(&self, start_bit: usize, bit_count: usize) -> u64 {
+        let mut value = 0u64;
+        for i in 0..bit_count {
+            if start_bit + i < self.data.binary_bits().len() {
+                if self.data.binary_bits()[start_bit + i] {
+                    value |= 1 << (bit_count - 1 - i);
+                }
+            }
+        }
+        value
+    }
 }
 
 impl Default for BitViewerPage {
@@ -280,3 +297,5 @@ impl Default for BitViewerPage {
         Self::new()
     }
 }
+
+
