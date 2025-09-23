@@ -1,9 +1,9 @@
-use eframe::egui::{self, Color32, RichText, TextEdit, Ui};
-use crate::core::{ConversionData, ConversionError};
 use crate::core::validators::{
-    BinaryValidator, DecimalValidator, HexValidator, FloatValidator,
-    HexTextValidator, AsciiValidator
+    AsciiValidator, BinaryValidator, DecimalValidator, FloatValidator, HexTextValidator,
+    HexValidator,
 };
+use crate::core::{ConversionData, ConversionError};
+use eframe::egui::{self, Color32, RichText, TextEdit, Ui};
 
 /// 转换器面板组件
 pub struct ConverterPanel;
@@ -28,7 +28,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -57,7 +57,10 @@ impl ConverterPanel {
                             if line.contains(':') {
                                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                                 if parts.len() == 2 {
-                                    ui.label(RichText::new(format!("{}:", parts[0])).color(Color32::BLUE));
+                                    ui.label(
+                                        RichText::new(format!("{}:", parts[0]))
+                                            .color(Color32::BLUE),
+                                    );
                                     ui.monospace(parts[1].trim());
                                 }
                             } else {
@@ -91,7 +94,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -120,7 +123,10 @@ impl ConverterPanel {
                             if line.contains(':') {
                                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                                 if parts.len() == 2 {
-                                    ui.label(RichText::new(format!("{}:", parts[0])).color(Color32::BLUE));
+                                    ui.label(
+                                        RichText::new(format!("{}:", parts[0]))
+                                            .color(Color32::BLUE),
+                                    );
                                     ui.monospace(parts[1].trim());
                                 }
                             } else {
@@ -154,7 +160,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -183,7 +189,10 @@ impl ConverterPanel {
                             if line.contains(':') {
                                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                                 if parts.len() == 2 {
-                                    ui.label(RichText::new(format!("{}:", parts[0])).color(Color32::BLUE));
+                                    ui.label(
+                                        RichText::new(format!("{}:", parts[0]))
+                                            .color(Color32::BLUE),
+                                    );
                                     ui.monospace(parts[1].trim());
                                 }
                             } else {
@@ -218,7 +227,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -301,7 +310,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -352,7 +361,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -403,7 +412,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -455,7 +464,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -477,7 +486,7 @@ impl ConverterPanel {
                         ui.colored_label(Color32::RED, error.to_string());
                     } else if !data.output().is_empty() {
                         ui.label("结果:");
-                        ui.monospace(data.format_output_with_separator());
+                        ui.monospace(data.output());
                     }
                 });
             });
@@ -498,16 +507,16 @@ impl ConverterPanel {
             ui.vertical(|ui| {
                 // 标题
                 ui.label(RichText::new(title).color(Color32::BLUE).strong());
-                
+
                 // 输入框
                 ui.horizontal(|ui| {
                     ui.label("输入:");
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
-                    
+
                     if response.changed() {
                         data.update_cleaned_input();
                         // 执行转换
@@ -516,19 +525,19 @@ impl ConverterPanel {
                         }
                     }
                 });
-                
+
                 // 显示结果或错误
                 ui.horizontal(|ui| {
                     if let Some(error) = data.last_error() {
                         ui.colored_label(Color32::RED, error.to_string());
                     } else if !data.output().is_empty() {
                         ui.label("结果:");
-                        ui.monospace(data.format_output_with_separator());
+                        ui.monospace(data.output());
                     }
                 });
             });
         });
-        
+
         ui.add_space(10.0);
     }
 
@@ -552,7 +561,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -580,7 +589,10 @@ impl ConverterPanel {
                             if line.contains(':') {
                                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                                 if parts.len() == 2 {
-                                    ui.label(RichText::new(format!("{}:", parts[0])).color(Color32::BLUE));
+                                    ui.label(
+                                        RichText::new(format!("{}:", parts[0]))
+                                            .color(Color32::BLUE),
+                                    );
                                     ui.monospace(parts[1].trim());
                                 }
                             } else {
@@ -607,16 +619,16 @@ impl ConverterPanel {
             ui.vertical(|ui| {
                 // 标题
                 ui.label(RichText::new(title).color(Color32::BLUE).strong());
-                
+
                 // 输入框
                 ui.horizontal(|ui| {
                     ui.label("输入:");
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
-                    
+
                     if response.changed() {
                         data.update_cleaned_input();
                         // 执行转换
@@ -625,20 +637,23 @@ impl ConverterPanel {
                         }
                     }
                 });
-                
+
                 // 显示结果或错误
                 if let Some(error) = data.last_error() {
                     ui.colored_label(Color32::RED, error.to_string());
                 } else if !data.output().is_empty() {
                     ui.label("结果:");
-                    
+
                     // 多行显示结果
                     for line in data.output().lines() {
                         ui.horizontal(|ui| {
                             if line.contains(':') {
                                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                                 if parts.len() == 2 {
-                                    ui.label(RichText::new(format!("{}:", parts[0])).color(Color32::BLUE));
+                                    ui.label(
+                                        RichText::new(format!("{}:", parts[0]))
+                                            .color(Color32::BLUE),
+                                    );
                                     ui.monospace(parts[1].trim());
                                 }
                             } else {
@@ -649,7 +664,7 @@ impl ConverterPanel {
                 }
             });
         });
-        
+
         ui.add_space(10.0);
     }
 
@@ -672,7 +687,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -724,7 +739,7 @@ impl ConverterPanel {
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
 
                     if response.changed() {
@@ -800,16 +815,16 @@ impl ConverterPanel {
             ui.vertical(|ui| {
                 // 标题
                 ui.label(RichText::new(title).color(Color32::BLUE).strong());
-                
+
                 // 输入框
                 ui.horizontal(|ui| {
                     ui.label("输入:");
                     let response = ui.add(
                         TextEdit::singleline(data.raw_input_mut())
                             .desired_width(300.0)
-                            .hint_text(hint)
+                            .hint_text(hint),
                     );
-                    
+
                     if response.changed() {
                         data.update_cleaned_input();
                         // 执行转换
@@ -818,7 +833,7 @@ impl ConverterPanel {
                         }
                     }
                 });
-                
+
                 // 显示结果或错误
                 if let Some(error) = data.last_error() {
                     ui.colored_label(Color32::RED, error.to_string());
@@ -827,7 +842,7 @@ impl ConverterPanel {
                         ui.label("结果:");
                         ui.monospace(data.output());
                     });
-                    
+
                     // 分析按钮
                     ui.horizontal(|ui| {
                         if ui.button("详细分析").clicked() {
@@ -862,7 +877,7 @@ impl ConverterPanel {
                 }
             });
         });
-        
+
         ui.add_space(10.0);
     }
 
@@ -877,7 +892,7 @@ impl ConverterPanel {
             if ui.button("清除").clicked() {
                 *data = ConversionData::new();
             }
-            
+
             if ui.button("示例").clicked() {
                 data.set_input(example_value.to_string());
                 if let Err(error) = converter_fn(data) {
@@ -898,7 +913,7 @@ mod tests {
         // 这里主要测试数据流，UI测试需要在集成测试中进行
         let mut data = ConversionData::new();
         data.set_input("1010".to_string());
-        
+
         let result = BaseConverter::from_binary(&mut data);
         assert!(result.is_ok());
         assert!(!data.output().is_empty());

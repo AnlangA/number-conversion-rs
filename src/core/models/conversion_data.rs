@@ -51,27 +51,28 @@ impl ConversionData {
 
     /// 设置输入数据并验证格式（用于特定进制）
     pub fn set_input_with_validation(&mut self, input: String, radix: u32) -> bool {
-        // 先尝试清理输入
-        let cleaned = self.clean_input(&input);
-
         // 验证每个字符是否符合指定进制
         let mut valid_chars = String::new();
+        let mut display_chars = String::new();
         let mut has_invalid = false;
 
-        for ch in cleaned.chars() {
+        for ch in input.chars() {
             if ch.is_digit(radix) {
                 valid_chars.push(ch);
+                display_chars.push(ch);
+            } else if ch == ' ' || ch == '_' || ch == ',' {
+                display_chars.push(ch); // 保留分隔符用于显示
             } else {
                 has_invalid = true;
             }
         }
 
-        // 更新输入为有效字符
+        // 更新输入显示
         self.raw_input = if radix == 16 {
             // 十六进制保持大写
-            self.format_for_display(&valid_chars)
+            self.format_for_display(&display_chars)
         } else {
-            self.format_for_display(&valid_chars)
+            self.format_for_display(&display_chars)
         };
 
         self.cleaned_input = valid_chars;
@@ -111,12 +112,12 @@ impl ConversionData {
                 '.' if !has_dot => {
                     has_dot = true;
                     valid_chars.push(ch);
-                },
+                }
                 '-' if i == 0 && !has_minus => {
                     has_minus = true;
                     valid_chars.push(ch);
-                },
-                ' ' | '_' => {}, // 忽略分隔符
+                }
+                ' ' | '_' | ',' => {} // 忽略分隔符
                 _ => has_invalid = true,
             }
         }
@@ -146,14 +147,14 @@ impl ConversionData {
 
         for ch in input.chars() {
             match ch {
-                '0'..='9' | 'A'..='F' | 'a'..='f' | ' ' | '_' => {
+                '0'..='9' | 'A'..='F' | 'a'..='f' | ' ' | '_' | ',' => {
                     if ch.is_ascii_hexdigit() {
                         valid_chars.push(ch.to_ascii_uppercase());
                     } else if ch == ' ' {
                         valid_chars.push(' ');
                     }
-                    // 忽略下划线
-                },
+                    // 忽略下划线和逗号
+                }
                 _ => has_invalid = true,
             }
         }
@@ -241,60 +242,18 @@ impl ConversionData {
         self.clear_analysis();
     }
 
-    /// 清理输入数据，移除下划线和空格
+    /// 清理输入数据，移除下划线、空格和逗号
     fn clean_input(&self, input: &str) -> String {
         input
             .chars()
-            .filter(|&c| c != '_' && c != ' ')
+            .filter(|&c| c != '_' && c != ' ' && c != ',')
             .collect::<String>()
             .to_uppercase()
     }
 
-    /// 格式化输出数据，添加下划线分隔符以提高可读性
-    pub fn format_output_with_separator(&self) -> String {
-        self.format_with_separator(&self.output)
-    }
-
-    /// 为字符串添加下划线分隔符
-    fn format_with_separator(&self, data: &str) -> String {
-        if data.contains('.') {
-            // 处理浮点数
-            let parts: Vec<&str> = data.split('.').collect();
-            if parts.len() == 2 {
-                let before_dot = self.add_underscores_reverse(parts[0]);
-                let after_dot = parts[1];
-                format!("{}.{}", before_dot, after_dot)
-            } else {
-                data.to_string()
-            }
-        } else {
-            // 处理整数
-            self.add_underscores_reverse(data)
-        }
-    }
-
-    /// 格式化字符串用于显示（添加分隔符）
+    /// 格式化字符串用于显示
     fn format_for_display(&self, data: &str) -> String {
-        if data.len() > 4 {
-            self.format_with_separator(data)
-        } else {
-            data.to_string()
-        }
-    }
-
-    /// 从右到左每4位添加下划线
-    fn add_underscores_reverse(&self, data: &str) -> String {
-        let reversed: String = data.chars().rev().collect();
-        let mut result = String::new();
-        
-        for (i, c) in reversed.chars().enumerate() {
-            if i > 0 && i % 4 == 0 {
-                result.push('_');
-            }
-            result.push(c);
-        }
-        
-        result.chars().rev().collect()
+        data.to_string()
     }
 }
 
@@ -313,12 +272,5 @@ mod tests {
         let mut data = ConversionData::new();
         data.set_input("A1_B2 C3".to_string());
         assert_eq!(data.cleaned_input(), "A1B2C3");
-    }
-
-    #[test]
-    fn test_format_with_separator() {
-        let data = ConversionData::new();
-        assert_eq!(data.format_with_separator("12345678"), "1234_5678");
-        assert_eq!(data.format_with_separator("123.456"), "123.456");
     }
 }

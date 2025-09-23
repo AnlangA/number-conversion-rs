@@ -5,16 +5,16 @@ pub struct Formatter;
 
 impl Formatter {
     /// 为数字字符串添加分隔符以提高可读性
-    /// 
+    ///
     /// # 参数
     /// * `input` - 输入字符串
     /// * `separator` - 分隔符字符
     /// * `group_size` - 分组大小
-    /// 
+    ///
     /// # 示例
     /// ```
     /// use number_conversion::utils::formatting::Formatter;
-    /// 
+    ///
     /// let result = Formatter::add_separator("12345678", '_', 4);
     /// assert_eq!(result, "1234_5678");
     /// ```
@@ -26,7 +26,8 @@ impl Formatter {
         // 处理包含小数点的情况
         if let Some(dot_pos) = input.find('.') {
             let (before_dot, after_dot) = input.split_at(dot_pos);
-            let formatted_before = Self::add_separator_to_integer(before_dot, separator, group_size);
+            let formatted_before =
+                Self::add_separator_to_integer(before_dot, separator, group_size);
             format!("{}{}", formatted_before, after_dot)
         } else {
             Self::add_separator_to_integer(input, separator, group_size)
@@ -49,77 +50,71 @@ impl Formatter {
     }
 
     /// 移除字符串中的分隔符
-    /// 
+    ///
     /// # 参数
     /// * `input` - 输入字符串
     /// * `separators` - 要移除的分隔符数组
-    /// 
+    ///
     /// # 示例
     /// ```
     /// use number_conversion::utils::formatting::Formatter;
-    /// 
+    ///
     /// let result = Formatter::remove_separators("1234_5678 90AB", &['_', ' ']);
     /// assert_eq!(result, "1234567890AB");
     /// ```
     pub fn remove_separators(input: &str, separators: &[char]) -> String {
-        input
-            .chars()
-            .filter(|c| !separators.contains(c))
-            .collect()
+        input.chars().filter(|c| !separators.contains(c)).collect()
     }
 
-    /// 格式化十六进制字符串（大写，每4位添加下划线）
-    /// 
+    /// 格式化十六进制字符串（大写）
+    ///
     /// # 示例
     /// ```
     /// use number_conversion::utils::formatting::Formatter;
-    /// 
+    ///
     /// let result = Formatter::format_hex("abcd1234");
-    /// assert_eq!(result, "ABCD_1234");
+    /// assert_eq!(result, "ABCD1234");
     /// ```
     pub fn format_hex(input: &str) -> String {
-        let clean = Self::remove_separators(input, &['_', ' ']).to_uppercase();
-        Self::add_separator(&clean, '_', 4)
+        Self::remove_separators(input, &['_', ' ', ',']).to_uppercase()
     }
 
-    /// 格式化二进制字符串（每4位添加下划线）
-    /// 
+    /// 格式化二进制字符串
+    ///
     /// # 示例
     /// ```
     /// use number_conversion::utils::formatting::Formatter;
-    /// 
+    ///
     /// let result = Formatter::format_binary("10101010");
-    /// assert_eq!(result, "1010_1010");
+    /// assert_eq!(result, "10101010");
     /// ```
     pub fn format_binary(input: &str) -> String {
-        let clean = Self::remove_separators(input, &['_', ' ']);
-        Self::add_separator(&clean, '_', 4)
+        Self::remove_separators(input, &['_', ' ', ','])
     }
 
-    /// 格式化十进制字符串（每3位添加逗号）
-    /// 
+    /// 格式化十进制字符串
+    ///
     /// # 示例
     /// ```
     /// use number_conversion::utils::formatting::Formatter;
-    /// 
+    ///
     /// let result = Formatter::format_decimal("1234567");
-    /// assert_eq!(result, "1,234,567");
+    /// assert_eq!(result, "1234567");
     /// ```
     pub fn format_decimal(input: &str) -> String {
-        let clean = Self::remove_separators(input, &[',', ' ']);
-        Self::add_separator(&clean, ',', 3)
+        Self::remove_separators(input, &[',', ' ', '_'])
     }
 
     /// 截断长字符串并添加省略号
-    /// 
+    ///
     /// # 参数
     /// * `input` - 输入字符串
     /// * `max_length` - 最大长度
-    /// 
+    ///
     /// # 示例
     /// ```
     /// use number_conversion::utils::formatting::Formatter;
-    /// 
+    ///
     /// let result = Formatter::truncate("Hello World", 8);
     /// assert_eq!(result, "Hello...");
     /// ```
@@ -160,18 +155,18 @@ mod tests {
 
     #[test]
     fn test_format_hex() {
-        assert_eq!(Formatter::format_hex("abcd1234"), "ABCD_1234");
-        assert_eq!(Formatter::format_hex("ab_cd 12_34"), "ABCD_1234");
+        assert_eq!(Formatter::format_hex("abcd1234"), "ABCD1234");
+        assert_eq!(Formatter::format_hex("ab_cd 12_34"), "ABCD1234");
     }
 
     #[test]
     fn test_format_binary() {
-        assert_eq!(Formatter::format_binary("10101010"), "1010_1010");
+        assert_eq!(Formatter::format_binary("10101010"), "10101010");
     }
 
     #[test]
     fn test_format_decimal() {
-        assert_eq!(Formatter::format_decimal("1234567"), "1,234,567");
+        assert_eq!(Formatter::format_decimal("1234567"), "1234567");
     }
 
     #[test]

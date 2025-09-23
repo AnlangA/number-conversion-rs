@@ -61,17 +61,23 @@ impl BinaryValidator {
         }
 
         let mut valid_chars = String::new();
+        let mut display_chars = String::new();
         let mut has_invalid = false;
 
         for ch in input.chars() {
             match ch {
-                '0' | '1' => valid_chars.push(ch),
-                ' ' | '_' => {}, // 忽略分隔符
+                '0' | '1' => {
+                    valid_chars.push(ch);
+                    display_chars.push(ch);
+                }
+                ' ' | '_' | ',' => {
+                    display_chars.push(ch); // 保留分隔符用于显示
+                }
                 _ => has_invalid = true,
             }
         }
 
-        let display = Self::format_for_display(&valid_chars);
+        let display = Self::format_for_display(&display_chars);
 
         if has_invalid {
             ValidationResult::warning(
@@ -88,24 +94,20 @@ impl BinaryValidator {
     }
 
     fn format_for_display(input: &str) -> String {
-        if input.len() > 4 {
-            Self::add_separators(input, '_', 4)
-        } else {
-            input.to_string()
-        }
+        input.to_string()
     }
 
     fn add_separators(input: &str, separator: char, group_size: usize) -> String {
         let reversed: String = input.chars().rev().collect();
         let mut result = String::new();
-        
+
         for (i, c) in reversed.chars().enumerate() {
             if i > 0 && i % group_size == 0 {
                 result.push(separator);
             }
             result.push(c);
         }
-        
+
         result.chars().rev().collect()
     }
 }
@@ -121,17 +123,23 @@ impl DecimalValidator {
         }
 
         let mut valid_chars = String::new();
+        let mut display_chars = String::new();
         let mut has_invalid = false;
 
         for ch in input.chars() {
             match ch {
-                '0'..='9' => valid_chars.push(ch),
-                ' ' | '_' | ',' => {}, // 忽略分隔符
+                '0'..='9' => {
+                    valid_chars.push(ch);
+                    display_chars.push(ch);
+                }
+                ' ' | '_' | ',' => {
+                    display_chars.push(ch); // 保留分隔符用于显示
+                }
                 _ => has_invalid = true,
             }
         }
 
-        let display = Self::format_for_display(&valid_chars);
+        let display = Self::format_for_display(&display_chars);
 
         if has_invalid {
             ValidationResult::warning(
@@ -148,11 +156,7 @@ impl DecimalValidator {
     }
 
     fn format_for_display(input: &str) -> String {
-        if input.len() > 4 {
-            BinaryValidator::add_separators(input, '_', 4)
-        } else {
-            input.to_string()
-        }
+        input.to_string()
     }
 }
 
@@ -167,19 +171,23 @@ impl HexValidator {
         }
 
         let mut valid_chars = String::new();
+        let mut display_chars = String::new();
         let mut has_invalid = false;
 
         for ch in input.chars() {
             match ch {
                 '0'..='9' | 'A'..='F' | 'a'..='f' => {
                     valid_chars.push(ch.to_ascii_uppercase());
-                },
-                ' ' | '_' => {}, // 忽略分隔符
+                    display_chars.push(ch.to_ascii_uppercase());
+                }
+                ' ' | '_' | ',' => {
+                    display_chars.push(ch); // 保留分隔符用于显示
+                }
                 _ => has_invalid = true,
             }
         }
 
-        let display = Self::format_for_display(&valid_chars);
+        let display = Self::format_for_display(&display_chars);
 
         if has_invalid {
             ValidationResult::warning(
@@ -215,22 +223,30 @@ impl FloatValidator {
         }
 
         let mut valid_chars = String::new();
+        let mut display_chars = String::new();
         let mut has_invalid = false;
         let mut has_dot = false;
         let mut has_minus = false;
 
         for (i, ch) in input.chars().enumerate() {
             match ch {
-                '0'..='9' => valid_chars.push(ch),
+                '0'..='9' => {
+                    valid_chars.push(ch);
+                    display_chars.push(ch);
+                }
                 '.' if !has_dot => {
                     has_dot = true;
                     valid_chars.push(ch);
-                },
+                    display_chars.push(ch);
+                }
                 '-' if i == 0 && !has_minus => {
                     has_minus = true;
                     valid_chars.push(ch);
-                },
-                ' ' | '_' => {}, // 忽略分隔符
+                    display_chars.push(ch);
+                }
+                ' ' | '_' | ',' => {
+                    display_chars.push(ch); // 保留分隔符用于显示
+                }
                 _ => has_invalid = true,
             }
         }
@@ -238,14 +254,14 @@ impl FloatValidator {
         if has_invalid {
             ValidationResult::warning(
                 valid_chars.clone(),
-                valid_chars,
+                display_chars,
                 ConversionError::InvalidFormat {
                     expected: "浮点数字符(数字,小数点,负号)".to_string(),
                     got: "包含无效字符，已自动删除".to_string(),
                 },
             )
         } else {
-            ValidationResult::success(valid_chars.clone(), valid_chars)
+            ValidationResult::success(valid_chars.clone(), display_chars)
         }
     }
 }
@@ -267,9 +283,9 @@ impl HexTextValidator {
             match ch {
                 '0'..='9' | 'A'..='F' | 'a'..='f' => {
                     valid_chars.push(ch.to_ascii_uppercase());
-                },
+                }
                 ' ' => valid_chars.push(' '), // 保留空格作为分隔符
-                '_' => {}, // 忽略下划线
+                '_' | ',' => {}               // 忽略下划线和逗号
                 _ => has_invalid = true,
             }
         }
@@ -293,10 +309,7 @@ impl HexTextValidator {
 
     fn normalize_spaces(input: &str) -> String {
         // 移除多余的空格，确保十六进制字符之间有适当的分隔
-        input
-            .split_whitespace()
-            .collect::<Vec<&str>>()
-            .join(" ")
+        input.split_whitespace().collect::<Vec<&str>>().join(" ")
     }
 }
 
