@@ -16,3 +16,4 @@ eframe = "0.32.0"
 env_logger = "0.11.3"
 num = "0.4.3"
 egui_extras = { version = "0.32.0", features = ["all_loaders"] }
+mathcore = "0.3.1"

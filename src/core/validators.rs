@@ -96,20 +96,6 @@ impl BinaryValidator {
     fn format_for_display(input: &str) -> String {
         input.to_string()
     }
-
-    fn add_separators(input: &str, separator: char, group_size: usize) -> String {
-        let reversed: String = input.chars().rev().collect();
-        let mut result = String::new();
-
-        for (i, c) in reversed.chars().enumerate() {
-            if i > 0 && i % group_size == 0 {
-                result.push(separator);
-            }
-            result.push(c);
-        }
-
-        result.chars().rev().collect()
-    }
 }
 
 /// 十进制输入验证器
@@ -204,11 +190,7 @@ impl HexValidator {
     }
 
     fn format_for_display(input: &str) -> String {
-        if input.len() > 4 {
-            BinaryValidator::add_separators(input, '_', 4)
-        } else {
-            input.to_string()
-        }
+        input.to_string()
     }
 }
 

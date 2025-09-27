@@ -6,4 +6,4 @@ pub mod components;
 pub mod pages;
 
 pub use components::{NavigationComponent, AppPage, ConverterPanel};
-pub use pages::{NumberConversionPage, TextConversionPage, BitViewerPage};
+pub use pages::{NumberConversionPage, TextConversionPage, BitViewerPage, CalculatorPage};

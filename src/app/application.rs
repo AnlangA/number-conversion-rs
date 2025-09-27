@@ -1,6 +1,6 @@
 use eframe::{egui, App as EframeApp};
 use crate::app::config::{AppConfig, FontManager};
-use crate::ui::{NavigationComponent, AppPage, NumberConversionPage, TextConversionPage, BitViewerPage};
+use crate::ui::{NavigationComponent, AppPage, NumberConversionPage, TextConversionPage, BitViewerPage, CalculatorPage};
 
 /// 主应用程序结构
 pub struct Application {
@@ -14,6 +14,8 @@ pub struct Application {
     text_conversion_page: TextConversionPage,
     /// 位查看器页面
     bit_viewer_page: BitViewerPage,
+    /// 计算页面
+    calculator_page: CalculatorPage,
 }
 
 impl Application {
@@ -35,6 +37,7 @@ impl Application {
             number_conversion_page: NumberConversionPage::new(),
             text_conversion_page: TextConversionPage::new(),
             bit_viewer_page: BitViewerPage::new(),
+            calculator_page: CalculatorPage::new(),
         }
     }
 
@@ -57,6 +60,9 @@ impl Application {
                 }
                 AppPage::BitViewer => {
                     self.bit_viewer_page.render(ui);
+                }
+                AppPage::Calculator => {
+                    self.calculator_page.render(ui);
                 }
             }
         });

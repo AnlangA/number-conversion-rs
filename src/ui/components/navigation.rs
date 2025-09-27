@@ -9,6 +9,8 @@ pub enum AppPage {
     TextConversion,
     /// 位查看器页面
     BitViewer,
+    /// 计算页面
+    Calculator,
 }
 
 impl AppPage {
@@ -18,6 +20,7 @@ impl AppPage {
             AppPage::NumberConversion => "进制转换",
             AppPage::TextConversion => "字符转换",
             AppPage::BitViewer => "bit查看",
+            AppPage::Calculator => "计算",
         }
     }
 
@@ -27,6 +30,7 @@ impl AppPage {
             AppPage::NumberConversion,
             AppPage::TextConversion,
             AppPage::BitViewer,
+            AppPage::Calculator,
         ]
     }
 }
@@ -111,6 +115,7 @@ mod tests {
         assert_eq!(AppPage::NumberConversion.display_name(), "进制转换");
         assert_eq!(AppPage::TextConversion.display_name(), "字符转换");
         assert_eq!(AppPage::BitViewer.display_name(), "bit查看");
+        assert_eq!(AppPage::Calculator.display_name(), "计算");
     }
 
     #[test]
