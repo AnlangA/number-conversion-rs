@@ -1,4 +1,6 @@
-use crate::core::errors::{ConversionError, ConversionResult, validate_not_empty, validate_radix_chars};
+use crate::core::errors::{
+    validate_not_empty, validate_radix_chars, ConversionError, ConversionResult,
+};
 
 /// 位查看器的数据模型
 #[derive(Debug, Clone)]
@@ -77,6 +79,21 @@ impl BitViewerData {
         }
     }
 
+    /// 按位取反所有位
+    pub fn invert_all_bits(&mut self) {
+        if self.binary_bits.is_empty() {
+            return;
+        }
+
+        // 将所有位取反
+        for bit in &mut self.binary_bits {
+            *bit = !*bit;
+        }
+
+        // 更新十六进制显示
+        self.update_hex_from_bits();
+    }
+
     /// 获取最后的错误
     pub fn last_error(&self) -> Option<&ConversionError> {
         self.last_error.as_ref()
@@ -104,7 +121,8 @@ impl BitViewerData {
         self.last_error = None;
 
         // 清理输入
-        let clean_hex = self.hex_input
+        let clean_hex = self
+            .hex_input
             .replace(" ", "")
             .replace("_", "")
             .to_uppercase();
@@ -135,31 +153,31 @@ impl BitViewerData {
 
         let mut hex_string = String::new();
         let mut current_nibble = 0u8;
-        
+
         for (i, &bit) in self.binary_bits.iter().enumerate() {
             let bit_pos = 3 - (i % 4);
             if bit {
                 current_nibble |= 1 << bit_pos;
             }
-            
+
             if (i + 1) % 4 == 0 {
                 hex_string.push_str(&format!("{:X}", current_nibble));
                 current_nibble = 0;
             }
         }
-        
+
         // 处理不完整的最后一个nibble
         if self.binary_bits.len() % 4 != 0 {
             hex_string.push_str(&format!("{:X}", current_nibble));
         }
-        
+
         self.hex_input = hex_string;
     }
 
     /// 解析字段宽度配置
     fn parse_field_widths(&mut self) {
         self.field_widths.clear();
-        
+
         for part in self.field_widths_input.split_whitespace() {
             if let Ok(width) = part.parse::<usize>() {
                 if width > 0 && width <= 64 {
@@ -167,7 +185,7 @@ impl BitViewerData {
                 }
             }
         }
-        
+
         // 如果解析失败，使用默认值
         if self.field_widths.is_empty() {
             self.field_widths = vec![4, 4, 4, 4, 4, 4, 4, 4];
@@ -220,7 +238,7 @@ mod tests {
     fn test_hex_to_binary() {
         let mut data = BitViewerData::new();
         data.set_hex_input("A1".to_string());
-        
+
         let expected_bits = vec![true, false, true, false, false, false, false, true];
         assert_eq!(data.binary_bits(), expected_bits);
     }
@@ -229,9 +247,43 @@ mod tests {
     fn test_toggle_bit() {
         let mut data = BitViewerData::new();
         data.set_hex_input("A0".to_string());
-        
+
         data.toggle_bit(7); // 切换最后一位
         assert_eq!(data.hex_input(), "A1");
+    }
+
+    #[test]
+    fn test_invert_all_bits() {
+        let mut data = BitViewerData::new();
+        data.set_hex_input("A1B2".to_string()); // 1010 0001 1011 0010
+
+        data.invert_all_bits();
+
+        // 预期结果: 0101 1110 0100 1101 = 5E4D
+        assert_eq!(data.hex_input(), "5E4D");
+    }
+
+    #[test]
+    fn test_invert_all_bits_empty() {
+        let mut data = BitViewerData::new();
+
+        data.invert_all_bits(); // 空数据应该不会出错
+
+        assert!(data.binary_bits().is_empty());
+        assert_eq!(data.hex_input(), "");
+    }
+
+    #[test]
+    fn test_invert_all_bits_twice() {
+        let mut data = BitViewerData::new();
+        data.set_hex_input("FF".to_string());
+        let original = data.hex_input().to_string();
+
+        data.invert_all_bits();
+        assert_ne!(data.hex_input(), original);
+
+        data.invert_all_bits();
+        assert_eq!(data.hex_input(), original); // 两次取反应该回到原值
     }
 
     #[test]

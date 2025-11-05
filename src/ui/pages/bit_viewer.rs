@@ -1,5 +1,5 @@
-use eframe::egui::{self, Color32, RichText, TextEdit, Ui, Vec2, Sense, Align2, FontId, Stroke};
 use crate::core::BitViewerData;
+use eframe::egui::{self, Align2, Color32, FontId, RichText, Sense, Stroke, TextEdit, Ui, Vec2};
 
 /// 位查看器页面
 pub struct BitViewerPage {
@@ -37,6 +37,16 @@ impl BitViewerPage {
             if ui.button("示例").clicked() {
                 self.data.set_example();
             }
+
+            // 按位取反按钮，只有在有数据时才启用
+            let invert_button_enabled = !self.data.binary_bits().is_empty();
+            let invert_button = ui
+                .add_enabled(invert_button_enabled, egui::Button::new("按位取反"))
+                .on_hover_text("将所有位进行按位取反操作 (0→1, 1→0)");
+
+            if invert_button.clicked() {
+                self.data.invert_all_bits();
+            }
         });
 
         // 字段位数输入
@@ -49,7 +59,8 @@ impl BitViewerPage {
             );
 
             if response.changed() {
-                self.data.set_field_widths_input(self.data.field_widths_input().to_string());
+                self.data
+                    .set_field_widths_input(self.data.field_widths_input().to_string());
             }
         });
 
@@ -102,12 +113,19 @@ impl BitViewerPage {
             // 显示字段标题和数值
             let field_title = if field_index < configured_fields_count {
                 let field_value = self.calculate_field_value(field_start_bit, actual_group_size);
-                format!("字段 {} ({} 位): 0x{:X} {}", 
-                    field_index + 1, actual_group_size, field_value, field_value)
+                format!(
+                    "字段 {} ({} 位): 0x{:X} {}",
+                    field_index + 1,
+                    actual_group_size,
+                    field_value,
+                    field_value
+                )
             } else {
                 let field_value = self.calculate_field_value(field_start_bit, actual_group_size);
-                format!("剩余位 ({} 位): 0x{:X} {}", 
-                    actual_group_size, field_value, field_value)
+                format!(
+                    "剩余位 ({} 位): 0x{:X} {}",
+                    actual_group_size, field_value, field_value
+                )
             };
 
             ui.label(RichText::new(field_title).color(Color32::DARK_BLUE));
@@ -129,7 +147,8 @@ impl BitViewerPage {
                 for _ in 0..actual_group_size {
                     if temp_bit_index < self.data.binary_bits().len() {
                         let bit_position = self.data.binary_bits().len() - temp_bit_index - 1;
-                        let (rect, _) = ui.allocate_exact_size(Vec2::new(24.0, 12.0), Sense::hover());
+                        let (rect, _) =
+                            ui.allocate_exact_size(Vec2::new(24.0, 12.0), Sense::hover());
                         ui.painter().text(
                             rect.center(),
                             Align2::CENTER_CENTER,
@@ -256,11 +275,11 @@ impl BitViewerPage {
     /// 显示统计信息
     fn display_statistics(&self, ui: &mut Ui) {
         ui.label(RichText::new("统计信息:").color(Color32::DARK_GREEN));
-        
+
         let total_bits = self.data.binary_bits().len();
         let ones_count = self.data.binary_bits().iter().filter(|&&bit| bit).count();
         let zeros_count = total_bits - ones_count;
-        
+
         ui.horizontal(|ui| {
             ui.label(format!("总位数: {}", total_bits));
             ui.separator();
@@ -268,12 +287,18 @@ impl BitViewerPage {
             ui.separator();
             ui.label(format!("0的个数: {}", zeros_count));
         });
-        
+
         if total_bits > 0 {
             ui.horizontal(|ui| {
-                ui.label(format!("1的比例: {:.1}%", (ones_count as f32 / total_bits as f32) * 100.0));
+                ui.label(format!(
+                    "1的比例: {:.1}%",
+                    (ones_count as f32 / total_bits as f32) * 100.0
+                ));
                 ui.separator();
-                ui.label(format!("0的比例: {:.1}%", (zeros_count as f32 / total_bits as f32) * 100.0));
+                ui.label(format!(
+                    "0的比例: {:.1}%",
+                    (zeros_count as f32 / total_bits as f32) * 100.0
+                ));
             });
         }
     }
@@ -297,5 +322,3 @@ impl Default for BitViewerPage {
         Self::new()
     }
 }
-
-
