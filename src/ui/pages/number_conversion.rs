@@ -1,163 +1,226 @@
-use eframe::egui::{self, Ui};
-use crate::core::{ConversionData, BaseConverter, FloatConverter};
-use crate::ui::components::ConverterPanel;
+//! Number conversion page.
 
-/// 进制转换页面
-pub struct NumberConversionPage {
-    binary_data: ConversionData,
-    decimal_data: ConversionData,
-    hex_data: ConversionData,
-    f32_to_hex_data: ConversionData,
-    hex_to_f32_data: ConversionData,
-}
+use eframe::egui::{self, Color32, RichText, Ui, TextEdit};
+use crate::frontend::FrontendState;
 
-impl NumberConversionPage {
-    /// 创建新的进制转换页面
-    pub fn new() -> Self {
-        Self {
-            binary_data: ConversionData::new(),
-            decimal_data: ConversionData::new(),
-            hex_data: ConversionData::new(),
-            f32_to_hex_data: ConversionData::new(),
-            hex_to_f32_data: ConversionData::new(),
-        }
-    }
+/// Render the number conversion page.
+pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        ui.heading("进制转换");
+        ui.add_space(10.0);
 
-    /// 渲染页面
-    pub fn render(&mut self, ui: &mut Ui) {
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.heading("进制转换");
-            ui.add_space(10.0);
-
-            // 二进制转换器
-            ConverterPanel::render_binary_converter(
-                ui,
-                "二进制转换",
-                "输入二进制数，如: 1010",
-                &mut self.binary_data,
-                |data| BaseConverter::from_binary(data),
+        // Binary converter
+        ui.group(|ui| {
+            ui.label(RichText::new("二进制转换").color(Color32::BLUE));
+            
+            let response = ui.add(
+                TextEdit::singleline(&mut frontend.number_conversion.binary_field.input)
+                    .desired_width(300.0)
+                    .hint_text("输入二进制数，如: 1010"),
             );
-
-            // 十进制转换器
-            ConverterPanel::render_decimal_converter(
-                ui,
-                "十进制转换",
-                "输入十进制数，如: 255",
-                &mut self.decimal_data,
-                |data| BaseConverter::from_decimal(data),
-            );
-
-            // 十六进制转换器
-            ConverterPanel::render_hex_converter(
-                ui,
-                "十六进制转换",
-                "输入十六进制数，如: FF",
-                &mut self.hex_data,
-                |data| BaseConverter::from_hexadecimal(data),
-            );
-
-            ui.separator();
-            ui.heading("浮点数转换");
-            ui.add_space(10.0);
-
-            // f32转十六进制
-            ConverterPanel::render_float_converter(
-                ui,
-                "f32 → 十六进制",
-                "输入f32数值，如: 1.0",
-                &mut self.f32_to_hex_data,
-                |data| FloatConverter::f32_to_hex(data),
-            );
-
-            // 十六进制转f32（带分析功能）
-            ConverterPanel::render_hex_analyzer_converter(
-                ui,
-                "十六进制 → f32",
-                "输入8位十六进制，如: 3F800000",
-                &mut self.hex_to_f32_data,
-                |data| FloatConverter::hex_to_f32(data),
-                |data| FloatConverter::analyze_f32_structure(data),
-            );
-
-            // 操作按钮
-            ui.separator();
-            ui.horizontal(|ui| {
-                if ui.button("清除所有").clicked() {
-                    self.clear_all();
-                }
-                
-                if ui.button("加载示例").clicked() {
-                    self.load_examples();
-                }
-            });
+            
+            if response.changed() {
+                frontend.request_binary_conversion();
+            }
+            
+            if frontend.number_conversion.binary_field.pending_id.is_some() {
+                ui.spinner();
+            }
+            
+            let field = &frontend.number_conversion.binary_field;
+            if let Some(err) = &field.error {
+                ui.colored_label(Color32::RED, err);
+            } else if !field.binary.is_empty() || !field.decimal.is_empty() || !field.hexadecimal.is_empty() {
+                ui.horizontal(|ui| {
+                    if !field.binary.is_empty() { ui.label(format!("2进制: {}", field.binary)); }
+                    if !field.decimal.is_empty() { ui.label(format!("10进制: {}", field.decimal)); }
+                    if !field.hexadecimal.is_empty() { ui.label(format!("16进制: {}", field.hexadecimal)); }
+                });
+            }
         });
-    }
+        ui.add_space(8.0);
 
-    /// 清除所有数据
-    fn clear_all(&mut self) {
-        self.binary_data = ConversionData::new();
-        self.decimal_data = ConversionData::new();
-        self.hex_data = ConversionData::new();
-        self.f32_to_hex_data = ConversionData::new();
-        self.hex_to_f32_data = ConversionData::new();
-    }
+        // Decimal converter
+        ui.group(|ui| {
+            ui.label(RichText::new("十进制转换").color(Color32::BLUE));
+            
+            let response = ui.add(
+                TextEdit::singleline(&mut frontend.number_conversion.decimal_field.input)
+                    .desired_width(300.0)
+                    .hint_text("输入十进制数，如: 255"),
+            );
+            
+            if response.changed() {
+                frontend.request_decimal_conversion();
+            }
+            
+            if frontend.number_conversion.decimal_field.pending_id.is_some() {
+                ui.spinner();
+            }
+            
+            let field = &frontend.number_conversion.decimal_field;
+            if let Some(err) = &field.error {
+                ui.colored_label(Color32::RED, err);
+            } else if !field.binary.is_empty() || !field.decimal.is_empty() || !field.hexadecimal.is_empty() {
+                ui.horizontal(|ui| {
+                    if !field.binary.is_empty() { ui.label(format!("2进制: {}", field.binary)); }
+                    if !field.decimal.is_empty() { ui.label(format!("10进制: {}", field.decimal)); }
+                    if !field.hexadecimal.is_empty() { ui.label(format!("16进制: {}", field.hexadecimal)); }
+                });
+            }
+        });
+        ui.add_space(8.0);
 
-    /// 加载示例数据
-    fn load_examples(&mut self) {
-        // 二进制示例
-        self.binary_data.set_input("11111111".to_string());
-        let _ = BaseConverter::from_binary(&mut self.binary_data);
+        // Hex converter
+        ui.group(|ui| {
+            ui.label(RichText::new("十六进制转换").color(Color32::BLUE));
+            
+            let response = ui.add(
+                TextEdit::singleline(&mut frontend.number_conversion.hex_field.input)
+                    .desired_width(300.0)
+                    .hint_text("输入十六进制数，如: FF"),
+            );
+            
+            if response.changed() {
+                frontend.request_hex_conversion();
+            }
+            
+            if frontend.number_conversion.hex_field.pending_id.is_some() {
+                ui.spinner();
+            }
+            
+            let field = &frontend.number_conversion.hex_field;
+            if let Some(err) = &field.error {
+                ui.colored_label(Color32::RED, err);
+            } else if !field.binary.is_empty() || !field.decimal.is_empty() || !field.hexadecimal.is_empty() {
+                ui.horizontal(|ui| {
+                    if !field.binary.is_empty() { ui.label(format!("2进制: {}", field.binary)); }
+                    if !field.decimal.is_empty() { ui.label(format!("10进制: {}", field.decimal)); }
+                    if !field.hexadecimal.is_empty() { ui.label(format!("16进制: {}", field.hexadecimal)); }
+                });
+            }
+        });
+        ui.add_space(8.0);
 
-        // 十进制示例
-        self.decimal_data.set_input("255".to_string());
-        let _ = BaseConverter::from_decimal(&mut self.decimal_data);
+        ui.separator();
+        ui.heading("浮点数转换");
+        ui.add_space(10.0);
 
-        // 十六进制示例
-        self.hex_data.set_input("FF".to_string());
-        let _ = BaseConverter::from_hexadecimal(&mut self.hex_data);
+        // f32 to hex
+        ui.group(|ui| {
+            ui.label(RichText::new("f32 → 十六进制").color(Color32::BLUE));
+            
+            let response = ui.add(
+                TextEdit::singleline(&mut frontend.float_conversion.f32_to_hex.input)
+                    .desired_width(300.0)
+                    .hint_text("输入f32数值，如: 1.0"),
+            );
+            
+            if response.changed() {
+                frontend.request_float_conversion(true);
+            }
+            
+            if frontend.float_conversion.f32_to_hex.pending_id.is_some() {
+                ui.spinner();
+            }
+            
+            let field = &frontend.float_conversion.f32_to_hex;
+            if let Some(err) = &field.error {
+                ui.colored_label(Color32::RED, err);
+            } else if !field.output.is_empty() {
+                ui.label(format!("结果: {}", field.output));
+            }
+        });
+        ui.add_space(8.0);
 
-        // f32示例
-        self.f32_to_hex_data.set_input("3.14159".to_string());
-        let _ = FloatConverter::f32_to_hex(&mut self.f32_to_hex_data);
+        // hex to f32
+        ui.group(|ui| {
+            ui.label(RichText::new("十六进制 → f32").color(Color32::BLUE));
+            
+            let response = ui.add(
+                TextEdit::singleline(&mut frontend.float_conversion.hex_to_f32.input)
+                    .desired_width(300.0)
+                    .hint_text("输入8位十六进制，如: 3F800000"),
+            );
+            
+            if response.changed() {
+                frontend.request_float_conversion(false);
+            }
+            
+            if frontend.float_conversion.hex_to_f32.pending_id.is_some() {
+                ui.spinner();
+            }
+            
+            let field = &frontend.float_conversion.hex_to_f32;
+            if let Some(err) = &field.error {
+                ui.colored_label(Color32::RED, err);
+            } else if !field.output.is_empty() {
+                ui.label(format!("结果: {}", field.output));
+                if let Some(analysis) = &field.analysis {
+                    ui.add_space(5.0);
+                    egui::CollapsingHeader::new("IEEE 754 分析")
+                        .default_open(false)
+                        .show(ui, |ui| {
+                            ui.monospace(analysis);
+                        });
+                }
+            }
+        });
+        ui.add_space(8.0);
 
-        // 十六进制转f32示例
-        self.hex_to_f32_data.set_input("40490FDB".to_string());
-        let _ = FloatConverter::hex_to_f32(&mut self.hex_to_f32_data);
-    }
-}
-
-impl Default for NumberConversionPage {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_number_conversion_page_creation() {
-        let page = NumberConversionPage::new();
-        assert_eq!(page.binary_data.raw_input(), "");
-        assert_eq!(page.decimal_data.raw_input(), "");
-    }
-
-    #[test]
-    fn test_clear_all() {
-        let mut page = NumberConversionPage::new();
-        page.binary_data.set_input("test".to_string());
-        
-        page.clear_all();
-        assert_eq!(page.binary_data.raw_input(), "");
-    }
-
-    #[test]
-    fn test_load_examples() {
-        let mut page = NumberConversionPage::new();
-        page.load_examples();
-        
-        assert!(!page.binary_data.raw_input().is_empty());
-        assert!(!page.decimal_data.raw_input().is_empty());
-    }
+        // Action buttons
+        ui.separator();
+        ui.horizontal(|ui| {
+            if ui.button("清除所有").clicked() {
+                frontend.number_conversion.binary_field.input.clear();
+                frontend.number_conversion.binary_field.binary.clear();
+                frontend.number_conversion.binary_field.decimal.clear();
+                frontend.number_conversion.binary_field.hexadecimal.clear();
+                frontend.number_conversion.binary_field.error = None;
+                frontend.number_conversion.binary_field.pending_id = None;
+                
+                frontend.number_conversion.decimal_field.input.clear();
+                frontend.number_conversion.decimal_field.binary.clear();
+                frontend.number_conversion.decimal_field.decimal.clear();
+                frontend.number_conversion.decimal_field.hexadecimal.clear();
+                frontend.number_conversion.decimal_field.error = None;
+                frontend.number_conversion.decimal_field.pending_id = None;
+                
+                frontend.number_conversion.hex_field.input.clear();
+                frontend.number_conversion.hex_field.binary.clear();
+                frontend.number_conversion.hex_field.decimal.clear();
+                frontend.number_conversion.hex_field.hexadecimal.clear();
+                frontend.number_conversion.hex_field.error = None;
+                frontend.number_conversion.hex_field.pending_id = None;
+                
+                frontend.float_conversion.f32_to_hex.input.clear();
+                frontend.float_conversion.f32_to_hex.output.clear();
+                frontend.float_conversion.f32_to_hex.error = None;
+                frontend.float_conversion.f32_to_hex.pending_id = None;
+                
+                frontend.float_conversion.hex_to_f32.input.clear();
+                frontend.float_conversion.hex_to_f32.output.clear();
+                frontend.float_conversion.hex_to_f32.analysis = None;
+                frontend.float_conversion.hex_to_f32.error = None;
+                frontend.float_conversion.hex_to_f32.pending_id = None;
+            }
+            
+            if ui.button("加载示例").clicked() {
+                frontend.number_conversion.binary_field.input = "11111111".to_string();
+                frontend.request_binary_conversion();
+                
+                frontend.number_conversion.decimal_field.input = "255".to_string();
+                frontend.request_decimal_conversion();
+                
+                frontend.number_conversion.hex_field.input = "FF".to_string();
+                frontend.request_hex_conversion();
+                
+                frontend.float_conversion.f32_to_hex.input = "3.14159".to_string();
+                frontend.request_float_conversion(true);
+                
+                frontend.float_conversion.hex_to_f32.input = "40490FDB".to_string();
+                frontend.request_float_conversion(false);
+            }
+        });
+    });
 }

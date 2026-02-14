@@ -4,8 +4,5 @@
 
 /// 导航组件
 pub mod navigation;
-/// 转换器面板组件
-pub mod converter_panel;
 
 pub use navigation::{NavigationComponent, AppPage};
-pub use converter_panel::ConverterPanel;

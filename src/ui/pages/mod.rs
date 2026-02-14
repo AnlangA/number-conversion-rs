@@ -1,17 +1,13 @@
 //! 页面模块
 //!
-//! 包含应用程序的各个页面
+//! 包含应用程序的各个页面渲染函数
 
-/// 进制转换页面
-pub mod number_conversion;
-/// 文本转换页面
-pub mod text_conversion;
-/// 位查看器页面
-pub mod bit_viewer;
-/// 计算页面
-pub mod calculator;
+mod number_conversion;
+mod text_conversion;
+mod bit_viewer;
+mod calculator;
 
-pub use number_conversion::NumberConversionPage;
-pub use text_conversion::TextConversionPage;
-pub use bit_viewer::BitViewerPage;
-pub use calculator::CalculatorPage;
+pub use number_conversion::render as render_number_conversion;
+pub use text_conversion::render as render_text_conversion;
+pub use bit_viewer::render as render_bit_viewer;
+pub use calculator::render as render_calculator;

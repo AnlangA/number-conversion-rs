@@ -1,6 +1,7 @@
 use eframe::{egui, App as EframeApp};
 use crate::app::config::{AppConfig, FontManager};
-use crate::ui::{NavigationComponent, AppPage, NumberConversionPage, TextConversionPage, BitViewerPage, CalculatorPage};
+use crate::ui::{NavigationComponent, AppPage};
+use crate::frontend::FrontendState;
 
 /// 主应用程序结构
 pub struct Application {
@@ -8,14 +9,8 @@ pub struct Application {
     config: AppConfig,
     /// 导航组件
     navigation: NavigationComponent,
-    /// 进制转换页面
-    number_conversion_page: NumberConversionPage,
-    /// 文本转换页面
-    text_conversion_page: TextConversionPage,
-    /// 位查看器页面
-    bit_viewer_page: BitViewerPage,
-    /// 计算页面
-    calculator_page: CalculatorPage,
+    /// 前端状态（包含所有页面状态和后端通信）
+    frontend: FrontendState,
 }
 
 impl Application {
@@ -34,10 +29,7 @@ impl Application {
         Self {
             config,
             navigation: NavigationComponent::new(),
-            number_conversion_page: NumberConversionPage::new(),
-            text_conversion_page: TextConversionPage::new(),
-            bit_viewer_page: BitViewerPage::new(),
-            calculator_page: CalculatorPage::new(),
+            frontend: FrontendState::new(),
         }
     }
 
@@ -53,16 +45,16 @@ impl Application {
         egui::CentralPanel::default().show(ctx, |ui| {
             match current_page {
                 AppPage::NumberConversion => {
-                    self.number_conversion_page.render(ui);
+                    crate::ui::pages::render_number_conversion(ui, &mut self.frontend);
                 }
                 AppPage::TextConversion => {
-                    self.text_conversion_page.render(ui);
+                    crate::ui::pages::render_text_conversion(ui, &mut self.frontend);
                 }
                 AppPage::BitViewer => {
-                    self.bit_viewer_page.render(ui);
+                    crate::ui::pages::render_bit_viewer(ui, &mut self.frontend);
                 }
                 AppPage::Calculator => {
-                    self.calculator_page.render(ui);
+                    crate::ui::pages::render_calculator(ui, &mut self.frontend);
                 }
             }
         });
@@ -73,6 +65,9 @@ impl EframeApp for Application {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // 设置视觉样式
         ctx.set_visuals(egui::Visuals::light());
+
+        // 轮询后端响应
+        self.frontend.poll_responses();
 
         // 渲染导航栏
         self.navigation.render(ctx);
