@@ -1,16 +1,16 @@
 //! # 编码转换工具
-//! 
+//!
 //! 一个用Rust和egui构建的跨平台编码转换工具，支持多种进制转换、文本编码转换和位操作查看。
-//! 
+//!
 //! ## 架构
-//! 
+//!
 //! - **backend**: 后端计算引擎，运行在独立线程
 //! - **frontend**: 前端状态管理，与后端异步通信
 //! - **ui**: 用户界面组件和页面
 //! - **core**: 核心业务逻辑（计算引擎、错误处理）
-//! 
+//!
 //! ## 功能特性
-//! 
+//!
 //! - **进制转换**: 支持二进制、八进制、十进制、十六进制之间的相互转换
 //! - **文本转换**: ASCII文本与十六进制编码的相互转换
 //! - **浮点数转换**: IEEE 754单精度浮点数与十六进制表示的转换
@@ -29,7 +29,7 @@ pub mod frontend;
 pub mod ui;
 
 // 重新导出常用类型
-pub use app::{Application, ApplicationBuilder, AppConfig};
+pub use app::{AppConfig, Application, ApplicationBuilder};
 pub use backend::Backend;
 pub use frontend::FrontendState;
 pub use ui::{AppPage, NavigationComponent};

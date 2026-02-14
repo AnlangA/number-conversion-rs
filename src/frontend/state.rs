@@ -20,7 +20,7 @@ const MAX_HISTORY: usize = 200;
 // ============================================================================
 
 /// State for a single number conversion field.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct NumberConversionField {
     /// User input string.
     pub input: String,
@@ -34,19 +34,6 @@ pub struct NumberConversionField {
     pub error: Option<String>,
     /// Pending request ID for async tracking.
     pub pending_id: Option<u64>,
-}
-
-impl Default for NumberConversionField {
-    fn default() -> Self {
-        Self {
-            input: String::new(),
-            binary: String::new(),
-            decimal: String::new(),
-            hexadecimal: String::new(),
-            error: None,
-            pending_id: None,
-        }
-    }
 }
 
 /// State for number conversion page.
@@ -65,7 +52,7 @@ pub struct NumberConversionState {
 // ============================================================================
 
 /// State for float conversion field.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FloatConversionField {
     /// User input string.
     pub input: String,
@@ -77,18 +64,6 @@ pub struct FloatConversionField {
     pub error: Option<String>,
     /// Pending request ID for async tracking.
     pub pending_id: Option<u64>,
-}
-
-impl Default for FloatConversionField {
-    fn default() -> Self {
-        Self {
-            input: String::new(),
-            output: String::new(),
-            analysis: None,
-            error: None,
-            pending_id: None,
-        }
-    }
 }
 
 /// State for float conversion page.
@@ -105,7 +80,7 @@ pub struct FloatConversionState {
 // ============================================================================
 
 /// State for text conversion field.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TextConversionField {
     /// User input string.
     pub input: String,
@@ -115,17 +90,6 @@ pub struct TextConversionField {
     pub error: Option<String>,
     /// Pending request ID for async tracking.
     pub pending_id: Option<u64>,
-}
-
-impl Default for TextConversionField {
-    fn default() -> Self {
-        Self {
-            input: String::new(),
-            output: String::new(),
-            error: None,
-            pending_id: None,
-        }
-    }
 }
 
 /// State for text conversion page.
@@ -213,10 +177,8 @@ impl BitViewerState {
     pub fn calculate_field_value(&self, start_bit: usize, bit_count: usize) -> u64 {
         let mut value = 0u64;
         for i in 0..bit_count {
-            if start_bit + i < self.binary_bits.len() {
-                if self.binary_bits[start_bit + i] {
-                    value |= 1 << (bit_count - 1 - i);
-                }
+            if start_bit + i < self.binary_bits.len() && self.binary_bits[start_bit + i] {
+                value |= 1 << (bit_count - 1 - i);
             }
         }
         value
@@ -323,7 +285,7 @@ impl FrontendState {
                 let binary = resp.binary.clone().unwrap_or_default();
                 let decimal = resp.decimal.clone().unwrap_or_default();
                 let hexadecimal = resp.hexadecimal.clone().unwrap_or_default();
-                
+
                 if self.number_conversion.binary_field.pending_id == Some(id) {
                     self.number_conversion.binary_field.pending_id = None;
                     self.number_conversion.binary_field.error = error;
@@ -348,7 +310,7 @@ impl FrontendState {
                 let id = resp.id;
                 let output = resp.output.clone();
                 let error = resp.error.clone();
-                
+
                 if self.text_conversion.ascii_to_hex.pending_id == Some(id) {
                     self.text_conversion.ascii_to_hex.pending_id = None;
                     self.text_conversion.ascii_to_hex.output = output;
@@ -364,7 +326,7 @@ impl FrontendState {
                 let output = resp.output.clone();
                 let error = resp.error.clone();
                 let analysis = resp.analysis.clone();
-                
+
                 if self.float_conversion.f32_to_hex.pending_id == Some(id) {
                     self.float_conversion.f32_to_hex.pending_id = None;
                     self.float_conversion.f32_to_hex.output = output;
@@ -420,13 +382,12 @@ impl FrontendState {
         let id = self.backend.next_id();
         self.number_conversion.binary_field.pending_id = Some(id);
         self.number_conversion.binary_field.error = None;
-        self.backend.send_request(BackendRequest::NumberConversion(
-            NumberConversionRequest {
+        self.backend
+            .send_request(BackendRequest::NumberConversion(NumberConversionRequest {
                 id,
                 conversion_type: NumberConversionType::Binary,
                 input: self.number_conversion.binary_field.input.clone(),
-            },
-        ));
+            }));
     }
 
     /// Request number conversion for decimal input.
@@ -434,13 +395,12 @@ impl FrontendState {
         let id = self.backend.next_id();
         self.number_conversion.decimal_field.pending_id = Some(id);
         self.number_conversion.decimal_field.error = None;
-        self.backend.send_request(BackendRequest::NumberConversion(
-            NumberConversionRequest {
+        self.backend
+            .send_request(BackendRequest::NumberConversion(NumberConversionRequest {
                 id,
                 conversion_type: NumberConversionType::Decimal,
                 input: self.number_conversion.decimal_field.input.clone(),
-            },
-        ));
+            }));
     }
 
     /// Request number conversion for hex input.
@@ -448,13 +408,12 @@ impl FrontendState {
         let id = self.backend.next_id();
         self.number_conversion.hex_field.pending_id = Some(id);
         self.number_conversion.hex_field.error = None;
-        self.backend.send_request(BackendRequest::NumberConversion(
-            NumberConversionRequest {
+        self.backend
+            .send_request(BackendRequest::NumberConversion(NumberConversionRequest {
                 id,
                 conversion_type: NumberConversionType::Hexadecimal,
                 input: self.number_conversion.hex_field.input.clone(),
-            },
-        ));
+            }));
     }
 
     /// Request text conversion.
@@ -468,8 +427,8 @@ impl FrontendState {
         field.pending_id = Some(id);
         field.error = None;
 
-        self.backend.send_request(BackendRequest::TextConversion(
-            TextConversionRequest {
+        self.backend
+            .send_request(BackendRequest::TextConversion(TextConversionRequest {
                 id,
                 conversion_type: if ascii_to_hex {
                     TextConversionType::AsciiToHex
@@ -477,8 +436,7 @@ impl FrontendState {
                     TextConversionType::HexToAscii
                 },
                 input: field.input.clone(),
-            },
-        ));
+            }));
     }
 
     /// Request float conversion.
@@ -492,8 +450,8 @@ impl FrontendState {
         field.pending_id = Some(id);
         field.error = None;
 
-        self.backend.send_request(BackendRequest::FloatConversion(
-            FloatConversionRequest {
+        self.backend
+            .send_request(BackendRequest::FloatConversion(FloatConversionRequest {
                 id,
                 conversion_type: if f32_to_hex {
                     FloatConversionType::F32ToHex
@@ -501,8 +459,7 @@ impl FrontendState {
                     FloatConversionType::HexToF32
                 },
                 input: field.input.clone(),
-            },
-        ));
+            }));
     }
 
     /// Request bit viewer to parse hex input.
@@ -510,49 +467,58 @@ impl FrontendState {
         let id = self.backend.next_id();
         self.bit_viewer.pending_id = Some(id);
         self.bit_viewer.error = None;
-        self.backend.send_request(BackendRequest::BitViewer(BitViewerRequest {
-            id,
-            operation: BitViewerOperation::ParseHex,
-            hex_input: Some(self.bit_viewer.hex_input.clone()),
-            current_bits: None,
-        }));
+        self.backend
+            .send_request(BackendRequest::BitViewer(BitViewerRequest {
+                id,
+                operation: BitViewerOperation::ParseHex,
+                hex_input: Some(self.bit_viewer.hex_input.clone()),
+                current_bits: None,
+            }));
     }
 
     /// Request to toggle a single bit.
     pub fn request_bit_toggle(&mut self, index: usize) {
         let id = self.backend.next_id();
         self.bit_viewer.pending_id = Some(id);
-        self.backend.send_request(BackendRequest::BitViewer(BitViewerRequest {
-            id,
-            operation: BitViewerOperation::ToggleBit(index),
-            hex_input: None,
-            current_bits: Some(self.bit_viewer.binary_bits.clone()),
-        }));
+        self.backend
+            .send_request(BackendRequest::BitViewer(BitViewerRequest {
+                id,
+                operation: BitViewerOperation::ToggleBit(index),
+                hex_input: None,
+                current_bits: Some(self.bit_viewer.binary_bits.clone()),
+            }));
     }
 
     /// Request to invert all bits.
     pub fn request_bit_invert_all(&mut self) {
         let id = self.backend.next_id();
         self.bit_viewer.pending_id = Some(id);
-        self.backend.send_request(BackendRequest::BitViewer(BitViewerRequest {
-            id,
-            operation: BitViewerOperation::InvertAll,
-            hex_input: None,
-            current_bits: Some(self.bit_viewer.binary_bits.clone()),
-        }));
+        self.backend
+            .send_request(BackendRequest::BitViewer(BitViewerRequest {
+                id,
+                operation: BitViewerOperation::InvertAll,
+                hex_input: None,
+                current_bits: Some(self.bit_viewer.binary_bits.clone()),
+            }));
     }
 
     /// Request calculator evaluation.
-    pub fn request_calculator_eval(&mut self, decimal_expr: String, radix: u32, original_input: String) {
+    pub fn request_calculator_eval(
+        &mut self,
+        decimal_expr: String,
+        radix: u32,
+        original_input: String,
+    ) {
         let id = self.backend.next_id();
         self.calculator.pending_id = Some(id);
         self.calculator.last_error = None;
-        self.backend.send_request(BackendRequest::Calculator(CalculatorRequest {
-            id,
-            decimal_expr,
-            radix,
-            original_input,
-        }));
+        self.backend
+            .send_request(BackendRequest::Calculator(CalculatorRequest {
+                id,
+                decimal_expr,
+                radix,
+                original_input,
+            }));
     }
 
     // ========================================================================
@@ -580,12 +546,18 @@ impl FrontendState {
             16 => Self::format_radix_hex(u),
             _ => u.to_string(),
         };
-        if neg { format!("-{s}") } else { s }
+        if neg {
+            format!("-{s}")
+        } else {
+            s
+        }
     }
 
     /// Format unsigned integer in given radix (2-10).
     fn format_radix(mut v: u128, radix: u32) -> String {
-        if v == 0 { return "0".to_string(); }
+        if v == 0 {
+            return "0".to_string();
+        }
         let mut buf = Vec::new();
         while v > 0 {
             let d = (v % radix as u128) as u32;
@@ -597,7 +569,9 @@ impl FrontendState {
 
     /// Format unsigned integer in hexadecimal.
     fn format_radix_hex(mut v: u128) -> String {
-        if v == 0 { return "0".to_string(); }
+        if v == 0 {
+            return "0".to_string();
+        }
         let mut buf = Vec::new();
         while v > 0 {
             let d = (v % 16) as u8;
@@ -612,12 +586,18 @@ impl FrontendState {
 
     /// Format float value in given radix with specified fraction digits.
     fn format_float_in_radix(val: f64, radix: u32, frac_digits: usize) -> String {
-        if !val.is_finite() { return "NaN".to_string(); }
+        if !val.is_finite() {
+            return "NaN".to_string();
+        }
         if radix == 10 {
             let mut s = format!("{:.12}", val);
             if s.contains('.') {
-                while s.ends_with('0') { s.pop(); }
-                if s.ends_with('.') { s.pop(); }
+                while s.ends_with('0') {
+                    s.pop();
+                }
+                if s.ends_with('.') {
+                    s.pop();
+                }
             }
             return s;
         }
@@ -629,8 +609,12 @@ impl FrontendState {
         if int_part_f > (u128::MAX as f64) {
             let mut s = format!("{:.12}", val);
             if s.contains('.') {
-                while s.ends_with('0') { s.pop(); }
-                if s.ends_with('.') { s.pop(); }
+                while s.ends_with('0') {
+                    s.pop();
+                }
+                if s.ends_with('.') {
+                    s.pop();
+                }
             }
             return format!("{} (十进制)", s);
         }
@@ -645,7 +629,9 @@ impl FrontendState {
 
         let frac = abs - (int_u as f64);
         if frac_digits == 0 || frac <= 0.0 {
-            if neg && (int_u != 0 || frac == 0.0) { int_str = format!("-{}", int_str); }
+            if neg && (int_u != 0 || frac == 0.0) {
+                int_str = format!("-{}", int_str);
+            }
             return int_str;
         }
 
@@ -661,11 +647,21 @@ impl FrontendState {
                 _ => (b'A' + ((di - 10) as u8)) as char,
             });
             f -= d;
-            if f < 1e-12 { break; }
+            if f < 1e-12 {
+                break;
+            }
         }
 
-        let result = if frac_str.is_empty() { int_str.clone() } else { format!("{}.{}", int_str, frac_str) };
-        if neg { format!("-{}", result) } else { result }
+        let result = if frac_str.is_empty() {
+            int_str.clone()
+        } else {
+            format!("{}.{}", int_str, frac_str)
+        };
+        if neg {
+            format!("-{}", result)
+        } else {
+            result
+        }
     }
 }
 

@@ -1,7 +1,7 @@
-use eframe::{egui, App as EframeApp};
 use crate::app::config::{AppConfig, FontManager};
-use crate::ui::{NavigationComponent, AppPage};
 use crate::frontend::FrontendState;
+use crate::ui::{AppPage, NavigationComponent};
+use eframe::{egui, App as EframeApp};
 
 /// 主应用程序结构
 pub struct Application {
@@ -22,7 +22,7 @@ impl Application {
 
         // 设置字体
         FontManager::setup_fonts(&cc.egui_ctx, &config.font_config);
-        
+
         // 安装图像加载器
         egui_extras::install_image_loaders(&cc.egui_ctx);
 
@@ -42,20 +42,18 @@ impl Application {
     fn render_current_page(&mut self, ctx: &egui::Context) {
         let current_page = self.navigation.current_page();
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            match current_page {
-                AppPage::NumberConversion => {
-                    crate::ui::pages::render_number_conversion(ui, &mut self.frontend);
-                }
-                AppPage::TextConversion => {
-                    crate::ui::pages::render_text_conversion(ui, &mut self.frontend);
-                }
-                AppPage::BitViewer => {
-                    crate::ui::pages::render_bit_viewer(ui, &mut self.frontend);
-                }
-                AppPage::Calculator => {
-                    crate::ui::pages::render_calculator(ui, &mut self.frontend);
-                }
+        egui::CentralPanel::default().show(ctx, |ui| match current_page {
+            AppPage::NumberConversion => {
+                crate::ui::pages::render_number_conversion(ui, &mut self.frontend);
+            }
+            AppPage::TextConversion => {
+                crate::ui::pages::render_text_conversion(ui, &mut self.frontend);
+            }
+            AppPage::BitViewer => {
+                crate::ui::pages::render_bit_viewer(ui, &mut self.frontend);
+            }
+            AppPage::Calculator => {
+                crate::ui::pages::render_calculator(ui, &mut self.frontend);
             }
         });
     }

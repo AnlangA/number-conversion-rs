@@ -1,8 +1,8 @@
 //! Calculator page with multi-radix expression evaluation.
 
-use eframe::egui::{self, Color32, RichText, Ui, TextEdit, FontId};
-use eframe::egui::text::{LayoutJob, TextFormat};
 use crate::frontend::FrontendState;
+use eframe::egui::text::{LayoutJob, TextFormat};
+use eframe::egui::{self, Color32, FontId, RichText, TextEdit, Ui};
 
 const FRACTION_DIGITS: usize = 16;
 
@@ -22,8 +22,16 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
                     _ => "自定义",
                 })
                 .show_ui(ui, |ui| {
-                    for (r, name) in [(2, "二进制(2)"), (8, "八进制(8)"), (10, "十进制(10)"), (16, "十六进制(16)")] {
-                        if ui.selectable_label(frontend.calculator.radix == r, name).clicked() {
+                    for (r, name) in [
+                        (2, "二进制(2)"),
+                        (8, "八进制(8)"),
+                        (10, "十进制(10)"),
+                        (16, "十六进制(16)"),
+                    ] {
+                        if ui
+                            .selectable_label(frontend.calculator.radix == r, name)
+                            .clicked()
+                        {
                             frontend.calculator.radix = r;
                             compute(frontend);
                         }
@@ -31,10 +39,11 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
                 });
 
             let radix_for_layouter = frontend.calculator.radix;
-            let mut layouter_fn = move |ui: &egui::Ui, text: &dyn egui::TextBuffer, wrap_width: f32| {
-                let job = build_layout_job(text.as_str(), radix_for_layouter, wrap_width);
-                ui.fonts(|f| f.layout_job(job))
-            };
+            let mut layouter_fn =
+                move |ui: &egui::Ui, text: &dyn egui::TextBuffer, wrap_width: f32| {
+                    let job = build_layout_job(text.as_str(), radix_for_layouter, wrap_width);
+                    ui.fonts(|f| f.layout_job(job))
+                };
             let te = TextEdit::singleline(&mut frontend.calculator.input)
                 .hint_text("在所选进制下输入表达式，如: A + B*10 或 1010 + 1111")
                 .desired_width(360.0)
@@ -64,7 +73,12 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
                     ui.horizontal(|ui| {
                         ui.label(RichText::new("结果:").color(Color32::DARK_GREEN));
                     });
-                    for (r, label) in [(2u32, "二进制(2)"), (8, "八进制(8)"), (10, "十进制(10)"), (16, "十六进制(16)")] {
+                    for (r, label) in [
+                        (2u32, "二进制(2)"),
+                        (8, "八进制(8)"),
+                        (10, "十进制(10)"),
+                        (16, "十六进制(16)"),
+                    ] {
                         let s = format_auto(val, r, FRACTION_DIGITS);
                         ui.horizontal(|ui| {
                             ui.label(label);
@@ -93,11 +107,18 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
                     ui.label(RichText::new(&entry.input));
                     ui.label(" => ");
                     match &entry.error {
-                        Some(err) => { ui.colored_label(Color32::RED, err); }
-                        None => { ui.monospace(&entry.output); }
+                        Some(err) => {
+                            ui.colored_label(Color32::RED, err);
+                        }
+                        None => {
+                            ui.monospace(&entry.output);
+                        }
                     }
                     if !entry.decimal_expr.is_empty() {
-                        ui.label(egui::RichText::new(format!("  (十进制: {})", entry.decimal_expr)).color(Color32::GRAY));
+                        ui.label(
+                            egui::RichText::new(format!("  (十进制: {})", entry.decimal_expr))
+                                .color(Color32::GRAY),
+                        );
                     }
                     if ui.small_button("重用").clicked() {
                         frontend.calculator.radix = entry.radix;
@@ -106,7 +127,9 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
                         frontend.calculator.last_error = None;
                     }
                 });
-                if idx > 50 { break; }
+                if idx > 50 {
+                    break;
+                }
             }
         });
 
@@ -177,11 +200,13 @@ fn convert_number_token(tok: &str, radix: u32) -> Result<String, String> {
         }
         return Ok(s);
     }
-    
+
     let s = tok.replace('_', "");
     let neg = s.starts_with('-');
     let body = if neg { &s[1..] } else { &s[..] };
-    if body.is_empty() { return Err("无效数字".to_string()); }
+    if body.is_empty() {
+        return Err("无效数字".to_string());
+    }
     if !body.chars().all(|c| is_digit_in_radix(c, radix)) {
         return Err(format!("包含超出基数 {radix} 的数字"));
     }
@@ -192,26 +217,44 @@ fn convert_number_token(tok: &str, radix: u32) -> Result<String, String> {
 
 fn convert_expr_from_base(expr: &str, radix: u32) -> Result<String, String> {
     #[derive(Clone, Copy, PartialEq, Eq)]
-    enum Kind { Start, Number, Ident, LParen, RParen, Op, Comma }
+    enum Kind {
+        Start,
+        Number,
+        Ident,
+        LParen,
+        RParen,
+        Op,
+        Comma,
+    }
 
     let mut out = String::new();
     let chars: Vec<char> = expr.chars().collect();
     let mut i = 0usize;
     let mut last_kind = Kind::Start;
     let mut last_ident: Option<String> = None;
-    let is_op = |c: char| matches!(c, '+'|'-'|'*'|'/'|'%'|'^'|','|'('|')');
+    let is_op = |c: char| matches!(c, '+' | '-' | '*' | '/' | '%' | '^' | ',' | '(' | ')');
 
     while i < chars.len() {
         let c = chars[i];
-        if c.is_whitespace() { i += 1; continue; }
+        if c.is_whitespace() {
+            i += 1;
+            continue;
+        }
 
-        let can_unary_minus = matches!(last_kind, Kind::Start | Kind::LParen | Kind::Op | Kind::Comma);
+        let can_unary_minus = matches!(
+            last_kind,
+            Kind::Start | Kind::LParen | Kind::Op | Kind::Comma
+        );
         if c == '-' && can_unary_minus {
             let start = i;
             i += 1;
             let mut j = i;
-            while j < chars.len() && is_number_char(chars[j], radix) { j += 1; }
-            if j == i { return Err("一元负号后缺少数字".to_string()); }
+            while j < chars.len() && is_number_char(chars[j], radix) {
+                j += 1;
+            }
+            if j == i {
+                return Err("一元负号后缺少数字".to_string());
+            }
             let token: String = chars[start..j].iter().collect();
             let val = convert_number_token(&token, radix)?;
             out.push_str(&val);
@@ -223,10 +266,14 @@ fn convert_expr_from_base(expr: &str, radix: u32) -> Result<String, String> {
         if is_number_char(c, radix) {
             let start = i;
             let mut j = i + 1;
-            while j < chars.len() && is_number_char(chars[j], radix) { j += 1; }
+            while j < chars.len() && is_number_char(chars[j], radix) {
+                j += 1;
+            }
             let token: String = chars[start..j].iter().collect();
             let val = convert_number_token(&token, radix)?;
-            if matches!(last_kind, Kind::Number | Kind::RParen | Kind::Ident) { out.push('*'); }
+            if matches!(last_kind, Kind::Number | Kind::RParen | Kind::Ident) {
+                out.push('*');
+            }
             out.push_str(&val);
             last_kind = Kind::Number;
             i = j;
@@ -239,11 +286,17 @@ fn convert_expr_from_base(expr: &str, radix: u32) -> Result<String, String> {
                     let insert = match last_kind {
                         Kind::Number | Kind::RParen => true,
                         Kind::Ident => {
-                            if let Some(ref name) = last_ident { !is_function_like(name) } else { true }
+                            if let Some(ref name) = last_ident {
+                                !is_function_like(name)
+                            } else {
+                                true
+                            }
                         }
                         _ => false,
                     };
-                    if insert { out.push('*'); }
+                    if insert {
+                        out.push('*');
+                    }
                     out.push('(');
                     last_kind = Kind::LParen;
                 }
@@ -269,10 +322,16 @@ fn convert_expr_from_base(expr: &str, radix: u32) -> Result<String, String> {
             let mut j = i + 1;
             while j < chars.len() {
                 let cj = chars[j];
-                if cj.is_ascii_alphanumeric() || cj == '_' { j += 1; } else { break; }
+                if cj.is_ascii_alphanumeric() || cj == '_' {
+                    j += 1;
+                } else {
+                    break;
+                }
             }
             let token: String = chars[start..j].iter().collect();
-            if matches!(last_kind, Kind::Number | Kind::RParen | Kind::Ident) { out.push('*'); }
+            if matches!(last_kind, Kind::Number | Kind::RParen | Kind::Ident) {
+                out.push('*');
+            }
             out.push_str(&token);
             last_kind = Kind::Ident;
             last_ident = Some(token);
@@ -289,11 +348,27 @@ fn convert_expr_from_base(expr: &str, radix: u32) -> Result<String, String> {
 fn is_function_like(name: &str) -> bool {
     matches!(
         name.to_ascii_lowercase().as_str(),
-        "sin"|"cos"|"tan"|"asin"|"acos"|"atan"
-        |"sinh"|"cosh"|"tanh"
-        |"log"|"ln"|"sqrt"|"abs"
-        |"floor"|"ceil"|"ceiling"|"round"
-        |"exp"|"pow"|"min"|"max"
+        "sin"
+            | "cos"
+            | "tan"
+            | "asin"
+            | "acos"
+            | "atan"
+            | "sinh"
+            | "cosh"
+            | "tanh"
+            | "log"
+            | "ln"
+            | "sqrt"
+            | "abs"
+            | "floor"
+            | "ceil"
+            | "ceiling"
+            | "round"
+            | "exp"
+            | "pow"
+            | "min"
+            | "max"
     )
 }
 
@@ -305,8 +380,16 @@ fn build_layout_job(text: &str, radix: u32, wrap_width: f32) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.wrap.max_width = wrap_width;
 
-    let default_fmt = TextFormat { font_id: FontId::monospace(14.0), color: Color32::BLACK, ..Default::default() };
-    let invalid_fmt = TextFormat { font_id: FontId::monospace(14.0), color: Color32::RED, ..Default::default() };
+    let default_fmt = TextFormat {
+        font_id: FontId::monospace(14.0),
+        color: Color32::BLACK,
+        ..Default::default()
+    };
+    let invalid_fmt = TextFormat {
+        font_id: FontId::monospace(14.0),
+        color: Color32::RED,
+        ..Default::default()
+    };
 
     let mut last_byte = 0usize;
     let mut last_invalid = false;
@@ -321,7 +404,15 @@ fn build_layout_job(text: &str, radix: u32, wrap_width: f32) -> LayoutJob {
         if is_invalid != last_invalid {
             let slice = &text[last_byte..byte_idx];
             if !slice.is_empty() {
-                job.append(slice, 0.0, if last_invalid { invalid_fmt.clone() } else { default_fmt.clone() });
+                job.append(
+                    slice,
+                    0.0,
+                    if last_invalid {
+                        invalid_fmt.clone()
+                    } else {
+                        default_fmt.clone()
+                    },
+                );
             }
             last_byte = byte_idx;
             last_invalid = is_invalid;
@@ -330,16 +421,31 @@ fn build_layout_job(text: &str, radix: u32, wrap_width: f32) -> LayoutJob {
 
     let slice = &text[last_byte..];
     if !slice.is_empty() {
-        job.append(slice, 0.0, if last_invalid { invalid_fmt } else { default_fmt });
+        job.append(
+            slice,
+            0.0,
+            if last_invalid {
+                invalid_fmt
+            } else {
+                default_fmt
+            },
+        );
     }
 
     job
 }
 
 fn is_valid_input_char(c: char, radix: u32) -> bool {
-    if c.is_whitespace() { return true; }
-    if is_digit_in_radix(c, radix) { return true; }
-    matches!(c, '+' | '-' | '*' | '/' | '%' | '(' | ')' | '^' | ',' | '.' | '_' ) || c.is_ascii_alphabetic()
+    if c.is_whitespace() {
+        return true;
+    }
+    if is_digit_in_radix(c, radix) {
+        return true;
+    }
+    matches!(
+        c,
+        '+' | '-' | '*' | '/' | '%' | '(' | ')' | '^' | ',' | '.' | '_'
+    ) || c.is_ascii_alphabetic()
 }
 
 // ============================================================================
@@ -365,11 +471,17 @@ fn format_value_in_radix(val: i128, radix: u32) -> String {
         16 => format_radix_hex(u),
         _ => u.to_string(),
     };
-    if neg { format!("-{s}") } else { s }
+    if neg {
+        format!("-{s}")
+    } else {
+        s
+    }
 }
 
 fn format_radix(mut v: u128, radix: u32) -> String {
-    if v == 0 { return "0".to_string(); }
+    if v == 0 {
+        return "0".to_string();
+    }
     let mut buf = Vec::new();
     while v > 0 {
         let d = (v % radix as u128) as u32;
@@ -380,23 +492,34 @@ fn format_radix(mut v: u128, radix: u32) -> String {
 }
 
 fn format_radix_hex(mut v: u128) -> String {
-    if v == 0 { return "0".to_string(); }
+    if v == 0 {
+        return "0".to_string();
+    }
     let mut buf = Vec::new();
     while v > 0 {
         let d = (v % 16) as u8;
-        buf.push(match d { 0..=9 => (b'0' + d) as char, _ => (b'A' + (d - 10)) as char });
+        buf.push(match d {
+            0..=9 => (b'0' + d) as char,
+            _ => (b'A' + (d - 10)) as char,
+        });
         v /= 16;
     }
     buf.iter().rev().collect()
 }
 
 fn format_float_in_radix(val: f64, radix: u32, frac_digits: usize) -> String {
-    if !val.is_finite() { return "NaN".to_string(); }
+    if !val.is_finite() {
+        return "NaN".to_string();
+    }
     if radix == 10 {
         let mut s = format!("{:.12}", val);
         if s.contains('.') {
-            while s.ends_with('0') { s.pop(); }
-            if s.ends_with('.') { s.pop(); }
+            while s.ends_with('0') {
+                s.pop();
+            }
+            if s.ends_with('.') {
+                s.pop();
+            }
         }
         return s;
     }
@@ -408,8 +531,12 @@ fn format_float_in_radix(val: f64, radix: u32, frac_digits: usize) -> String {
     if int_part_f > (u128::MAX as f64) {
         let mut s = format!("{:.12}", val);
         if s.contains('.') {
-            while s.ends_with('0') { s.pop(); }
-            if s.ends_with('.') { s.pop(); }
+            while s.ends_with('0') {
+                s.pop();
+            }
+            if s.ends_with('.') {
+                s.pop();
+            }
         }
         return format!("{} (十进制)", s);
     }
@@ -424,7 +551,9 @@ fn format_float_in_radix(val: f64, radix: u32, frac_digits: usize) -> String {
 
     let frac = abs - (int_u as f64);
     if frac_digits == 0 || frac <= 0.0 {
-        if neg && (int_u != 0 || frac == 0.0) { int_str = format!("-{}", int_str); }
+        if neg && (int_u != 0 || frac == 0.0) {
+            int_str = format!("-{}", int_str);
+        }
         return int_str;
     }
 
@@ -440,9 +569,19 @@ fn format_float_in_radix(val: f64, radix: u32, frac_digits: usize) -> String {
             _ => (b'A' + ((di - 10) as u8)) as char,
         });
         f -= d;
-        if f < 1e-12 { break; }
+        if f < 1e-12 {
+            break;
+        }
     }
 
-    let result = if frac_str.is_empty() { int_str.clone() } else { format!("{}.{}", int_str, frac_str) };
-    if neg { format!("-{}", result) } else { result }
+    let result = if frac_str.is_empty() {
+        int_str.clone()
+    } else {
+        format!("{}.{}", int_str, frac_str)
+    };
+    if neg {
+        format!("-{}", result)
+    } else {
+        result
+    }
 }

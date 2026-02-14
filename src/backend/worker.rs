@@ -13,15 +13,15 @@ impl BackendWorker {
     /// Process a single request and return the response.
     pub fn process_request(request: BackendRequest) -> Option<BackendResponse> {
         match request {
-            BackendRequest::NumberConversion(req) => {
-                Some(BackendResponse::NumberConversion(Self::handle_number_conversion(req)))
-            }
-            BackendRequest::TextConversion(req) => {
-                Some(BackendResponse::TextConversion(Self::handle_text_conversion(req)))
-            }
-            BackendRequest::FloatConversion(req) => {
-                Some(BackendResponse::FloatConversion(Self::handle_float_conversion(req)))
-            }
+            BackendRequest::NumberConversion(req) => Some(BackendResponse::NumberConversion(
+                Self::handle_number_conversion(req),
+            )),
+            BackendRequest::TextConversion(req) => Some(BackendResponse::TextConversion(
+                Self::handle_text_conversion(req),
+            )),
+            BackendRequest::FloatConversion(req) => Some(BackendResponse::FloatConversion(
+                Self::handle_float_conversion(req),
+            )),
             BackendRequest::BitViewer(req) => {
                 Some(BackendResponse::BitViewer(Self::handle_bit_viewer(req)))
             }
@@ -34,7 +34,7 @@ impl BackendWorker {
 
     fn handle_number_conversion(req: NumberConversionRequest) -> NumberConversionResponse {
         let input = req.input.replace("_", "").replace(" ", "").to_uppercase();
-        
+
         if input.is_empty() {
             return NumberConversionResponse {
                 id: req.id,
@@ -48,16 +48,13 @@ impl BackendWorker {
         // Parse the input number
         let number = match req.conversion_type {
             NumberConversionType::Binary => {
-                u64::from_str_radix(&input, 2)
-                    .map_err(|e| format!("二进制解析失败: {}", e))
+                u64::from_str_radix(&input, 2).map_err(|e| format!("二进制解析失败: {}", e))
             }
-            NumberConversionType::Decimal => {
-                input.parse::<u64>()
-                    .map_err(|e| format!("十进制解析失败: {}", e))
-            }
+            NumberConversionType::Decimal => input
+                .parse::<u64>()
+                .map_err(|e| format!("十进制解析失败: {}", e)),
             NumberConversionType::Hexadecimal => {
-                u64::from_str_radix(&input, 16)
-                    .map_err(|e| format!("十六进制解析失败: {}", e))
+                u64::from_str_radix(&input, 16).map_err(|e| format!("十六进制解析失败: {}", e))
             }
         };
 
@@ -82,12 +79,13 @@ impl BackendWorker {
     fn handle_text_conversion(req: TextConversionRequest) -> TextConversionResponse {
         match req.conversion_type {
             TextConversionType::AsciiToHex => {
-                let hex_result: String = req.input
+                let hex_result: String = req
+                    .input
                     .chars()
                     .map(|c| format!("{:02X}", c as u8))
                     .collect::<Vec<String>>()
                     .join(" ");
-                
+
                 TextConversionResponse {
                     id: req.id,
                     output: hex_result,
@@ -95,7 +93,8 @@ impl BackendWorker {
                 }
             }
             TextConversionType::HexToAscii => {
-                let clean_hex: String = req.input
+                let clean_hex: String = req
+                    .input
                     .chars()
                     .filter(|&c| c != ' ' && c != '_')
                     .collect::<String>()
@@ -109,7 +108,7 @@ impl BackendWorker {
                     };
                 }
 
-                if clean_hex.len() % 2 != 0 {
+                if !clean_hex.len().is_multiple_of(2) {
                     return TextConversionResponse {
                         id: req.id,
                         output: String::new(),
@@ -121,7 +120,7 @@ impl BackendWorker {
                 for chunk in clean_hex.as_bytes().chunks(2) {
                     if let Ok(hex_str) = std::str::from_utf8(chunk) {
                         if let Ok(byte_value) = u8::from_str_radix(hex_str, 16) {
-                            if byte_value.is_ascii() && byte_value >= 32 && byte_value <= 126 {
+                            if byte_value.is_ascii() && (32..=126).contains(&byte_value) {
                                 ascii_result.push(byte_value as char);
                             } else {
                                 ascii_result.push_str(&format!("[0x{:02X}]", byte_value));
@@ -143,25 +142,23 @@ impl BackendWorker {
         let input = req.input.replace("_", "").replace(" ", "");
 
         match req.conversion_type {
-            FloatConversionType::F32ToHex => {
-                match input.parse::<f32>() {
-                    Ok(float_value) => {
-                        let bits = float_value.to_bits();
-                        FloatConversionResponse {
-                            id: req.id,
-                            output: format!("{:08X}", bits),
-                            analysis: None,
-                            error: None,
-                        }
-                    }
-                    Err(e) => FloatConversionResponse {
+            FloatConversionType::F32ToHex => match input.parse::<f32>() {
+                Ok(float_value) => {
+                    let bits = float_value.to_bits();
+                    FloatConversionResponse {
                         id: req.id,
-                        output: String::new(),
+                        output: format!("{:08X}", bits),
                         analysis: None,
-                        error: Some(format!("无法解析为f32: {}", e)),
-                    },
+                        error: None,
+                    }
                 }
-            }
+                Err(e) => FloatConversionResponse {
+                    id: req.id,
+                    output: String::new(),
+                    analysis: None,
+                    error: Some(format!("无法解析为f32: {}", e)),
+                },
+            },
             FloatConversionType::HexToF32 => {
                 if input.len() != 8 {
                     return FloatConversionResponse {
@@ -198,7 +195,11 @@ impl BackendWorker {
                             bits,
                             bits,
                             (bits >> 31) & 1,
-                            if (bits >> 31) & 1 == 0 { "正数" } else { "负数" },
+                            if (bits >> 31) & 1 == 0 {
+                                "正数"
+                            } else {
+                                "负数"
+                            },
                             (bits >> 23) & 0xFF,
                             (bits >> 23) & 0xFF,
                             bits & 0x7FFFFF,
@@ -247,7 +248,7 @@ impl BackendWorker {
                 if !clean_hex.chars().all(|c| c.is_ascii_hexdigit()) {
                     return BitViewerResponse {
                         id: req.id,
-                        hex_input: hex_input,
+                        hex_input,
                         binary_bits: Vec::new(),
                         error: Some("无效的十六进制字符".to_string()),
                     };
@@ -322,7 +323,7 @@ impl BackendWorker {
         }
 
         // Handle incomplete last nibble
-        if bits.len() % 4 != 0 {
+        if !bits.len().is_multiple_of(4) {
             hex_string.push_str(&format!("{:X}", current_nibble));
         }
 
@@ -383,19 +384,14 @@ impl Backend {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
 
         let handle = thread::spawn(move || {
-            loop {
-                match request_rx.recv() {
-                    Ok(request) => {
-                        if matches!(request, BackendRequest::Shutdown) {
-                            break;
-                        }
-                        if let Some(response) = BackendWorker::process_request(request) {
-                            if response_tx.send(response).is_err() {
-                                break;
-                            }
-                        }
+            while let Ok(request) = request_rx.recv() {
+                if matches!(request, BackendRequest::Shutdown) {
+                    break;
+                }
+                if let Some(response) = BackendWorker::process_request(request) {
+                    if response_tx.send(response).is_err() {
+                        break;
                     }
-                    Err(_) => break,
                 }
             }
         });

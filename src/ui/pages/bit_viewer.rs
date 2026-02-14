@@ -1,7 +1,7 @@
 //! Bit viewer page.
 
-use eframe::egui::{self, Align2, Color32, FontId, RichText, Sense, Stroke, Ui, TextEdit, Vec2};
 use crate::frontend::FrontendState;
+use eframe::egui::{self, Align2, Color32, FontId, RichText, Sense, Stroke, TextEdit, Ui, Vec2};
 
 /// Render the bit viewer page.
 pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
@@ -106,13 +106,15 @@ fn display_bit_fields(ui: &mut Ui, frontend: &mut FrontendState, field_groups: &
 
         let field_start_bit = bit_index;
         let actual_group_size = group_size.min(frontend.bit_viewer.binary_bits.len() - bit_index);
-        
+
         // Update bit_index for next iteration
         bit_index += actual_group_size;
 
         // Display field title and value
         let field_title = if field_index < configured_fields_count {
-            let field_value = frontend.bit_viewer.calculate_field_value(field_start_bit, actual_group_size);
+            let field_value = frontend
+                .bit_viewer
+                .calculate_field_value(field_start_bit, actual_group_size);
             format!(
                 "字段 {} ({} 位): 0x{:X} {}",
                 field_index + 1,
@@ -121,7 +123,9 @@ fn display_bit_fields(ui: &mut Ui, frontend: &mut FrontendState, field_groups: &
                 field_value
             )
         } else {
-            let field_value = frontend.bit_viewer.calculate_field_value(field_start_bit, actual_group_size);
+            let field_value = frontend
+                .bit_viewer
+                .calculate_field_value(field_start_bit, actual_group_size);
             format!(
                 "剩余位 ({} 位): 0x{:X} {}",
                 actual_group_size, field_value, field_value

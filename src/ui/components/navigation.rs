@@ -1,9 +1,10 @@
 use eframe::egui::{self, Context};
 
 /// 应用程序页面枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AppPage {
     /// 进制转换页面
+    #[default]
     NumberConversion,
     /// 文本转换页面
     TextConversion,
@@ -32,12 +33,6 @@ impl AppPage {
             AppPage::BitViewer,
             AppPage::Calculator,
         ]
-    }
-}
-
-impl Default for AppPage {
-    fn default() -> Self {
-        AppPage::NumberConversion
     }
 }
 
@@ -71,19 +66,18 @@ impl NavigationComponent {
         egui::TopBottomPanel::top("navigation_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().button_padding = egui::vec2(12.0, 8.0);
-                
+
                 for &page in AppPage::all() {
                     let is_selected = page == self.current_page;
-                    
+
                     // 创建按钮样式
-                    let button = egui::Button::new(page.display_name())
-                        .selected(is_selected);
-                    
+                    let button = egui::Button::new(page.display_name()).selected(is_selected);
+
                     if ui.add(button).clicked() {
                         selected_page = page;
                     }
                 }
-                
+
                 // 在右侧添加一些信息
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.hyperlink_to("GitHub", "https://github.com/AnlangA/number-conversion-rs");
@@ -122,7 +116,7 @@ mod tests {
     fn test_navigation_component() {
         let mut nav = NavigationComponent::new();
         assert_eq!(nav.current_page(), AppPage::NumberConversion);
-        
+
         nav.set_current_page(AppPage::BitViewer);
         assert_eq!(nav.current_page(), AppPage::BitViewer);
     }
