@@ -7,10 +7,10 @@ use std::collections::VecDeque;
 
 use crate::backend::{Backend, BackendRequest, BackendResponse};
 use crate::backend::{
-    BitViewerOperation, BitViewerRequest, CalculatorRequest, FloatConversionRequest,
-    FloatConversionType, NumberConversionRequest, NumberConversionType, TextConversionRequest,
-    TextConversionType,
+    BitViewerOperation, CalculatorRequest, FloatConversionRequest, FloatConversionType,
+    NumberConversionRequest, NumberConversionType, TextConversionRequest, TextConversionType,
 };
+use crate::core::bit_ops;
 
 /// Maximum number of history entries to keep.
 const MAX_HISTORY: usize = 200;
@@ -108,14 +108,30 @@ pub struct TextConversionState {
 /// State for bit viewer page.
 #[derive(Debug, Clone)]
 pub struct BitViewerState {
-    /// Hex input string.
+    /// Raw hex text currently being edited by the user.
     pub hex_input: String,
+    /// Last successfully parsed and normalized hex text.
+    pub normalized_hex: String,
+    /// Canonical bit-string storage.
+    pub bit_string: String,
+    /// Decimal view text synchronized with the current bit-string.
+    pub decimal_input: String,
     /// Field width configuration string.
     pub field_widths_input: String,
     /// Parsed field widths.
     pub field_widths: Vec<usize>,
-    /// Binary bits representation.
+    /// Binary bits representation derived from `bit_string`.
     pub binary_bits: Vec<bool>,
+    /// Shift count input string.
+    pub shift_count_input: String,
+    /// Parsed shift count.
+    pub shift_count: usize,
+    /// Whether shifted-out bits should be cleared instead of rotated.
+    pub zero_fill_shift: bool,
+    /// Undo history for bit-string states.
+    pub undo_stack: Vec<String>,
+    /// Redo history for bit-string states.
+    pub redo_stack: Vec<String>,
     /// Error message if parsing failed.
     pub error: Option<String>,
     /// Pending request ID for async tracking.
@@ -126,9 +142,17 @@ impl Default for BitViewerState {
     fn default() -> Self {
         Self {
             hex_input: String::new(),
+            normalized_hex: String::new(),
+            bit_string: String::new(),
+            decimal_input: String::new(),
             field_widths_input: "4 4 4 4 4 4 4 4".to_string(),
             field_widths: vec![4, 4, 4, 4, 4, 4, 4, 4],
             binary_bits: Vec::new(),
+            shift_count_input: "1".to_string(),
+            shift_count: 1,
+            zero_fill_shift: true,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
             error: None,
             pending_id: None,
         }
@@ -151,37 +175,251 @@ impl BitViewerState {
         }
     }
 
+    /// Parse shift count from input string.
+    pub fn parse_shift_count(&mut self) {
+        self.shift_count = self
+            .shift_count_input
+            .trim()
+            .parse::<usize>()
+            .ok()
+            .filter(|count| *count > 0)
+            .unwrap_or(1);
+    }
+
+    fn current_shift_mode(&self) -> bit_ops::ShiftMode {
+        if self.zero_fill_shift {
+            bit_ops::ShiftMode::ZeroFill
+        } else {
+            bit_ops::ShiftMode::Rotate
+        }
+    }
+
+    fn sync_views_from_bit_string(&mut self) -> Result<(), String> {
+        self.binary_bits = bit_ops::bit_string_to_bits(&self.bit_string)?;
+        self.normalized_hex = bit_ops::bit_string_to_hex(&self.bit_string)?;
+        self.decimal_input = self.bit_string_to_decimal_string()?;
+        Ok(())
+    }
+
+    fn apply_bit_string(&mut self, bit_string: String) -> Result<(), String> {
+        self.bit_string = bit_string;
+        self.sync_views_from_bit_string()
+    }
+
+    fn bit_string_to_decimal_string(&self) -> Result<String, String> {
+        if self.bit_string.is_empty() {
+            return Ok(String::new());
+        }
+
+        u128::from_str_radix(&self.bit_string, 2)
+            .map(|value| value.to_string())
+            .map_err(|e| format!("二进制转十进制失败: {}", e))
+    }
+
+    fn decimal_string_to_bit_string(&self, decimal: &str) -> Result<String, String> {
+        let trimmed = decimal.trim();
+        if trimmed.is_empty() {
+            return Err("输入为空".to_string());
+        }
+
+        let value = trimmed
+            .parse::<u128>()
+            .map_err(|e| format!("十进制解析失败: {}", e))?;
+
+        let target_width = self.bit_string.len().max(1);
+        let raw_bits = format!("{:b}", value);
+
+        if raw_bits.len() > target_width {
+            return Err(format!(
+                "十进制数值超出当前位宽 {} 位，可表示范围不足",
+                target_width
+            ));
+        }
+
+        Ok(format!("{:0>width$}", raw_bits, width = target_width))
+    }
+
+    /// Return whether the bit viewer currently contains parsed bit data.
+    pub fn has_bits(&self) -> bool {
+        !self.bit_string.is_empty()
+    }
+
+    /// Return whether there is a previous bit state available.
+    pub fn can_undo(&self) -> bool {
+        !self.undo_stack.is_empty()
+    }
+
+    /// Return whether there is a redo bit state available.
+    pub fn can_redo(&self) -> bool {
+        !self.redo_stack.is_empty()
+    }
+
+    /// Return the preferred hexadecimal text for display in the UI.
+    pub fn display_hex(&self) -> &str {
+        if self.hex_input.is_empty() && !self.normalized_hex.is_empty() {
+            &self.normalized_hex
+        } else {
+            &self.hex_input
+        }
+    }
+
+    /// Clear all bit viewer data while preserving user configuration.
+    pub fn clear_data(&mut self) {
+        self.hex_input.clear();
+        self.normalized_hex.clear();
+        self.bit_string.clear();
+        self.decimal_input.clear();
+        self.binary_bits.clear();
+        self.undo_stack.clear();
+        self.redo_stack.clear();
+        self.error = None;
+        self.pending_id = None;
+    }
+
     /// Calculate field groups for display.
     pub fn calculate_field_groups(&self) -> Vec<usize> {
-        let mut groups = Vec::new();
-        let total_bits = self.binary_bits.len();
-        let mut remaining_bits = total_bits;
-
-        for &width in &self.field_widths {
-            if remaining_bits == 0 {
-                break;
-            }
-            let group_size = width.min(remaining_bits);
-            groups.push(group_size);
-            remaining_bits -= group_size;
-        }
-
-        if remaining_bits > 0 {
-            groups.push(remaining_bits);
-        }
-
-        groups
+        bit_ops::calculate_field_groups(self.bit_string.len(), &self.field_widths)
     }
 
     /// Calculate field value for display.
     pub fn calculate_field_value(&self, start_bit: usize, bit_count: usize) -> u64 {
-        let mut value = 0u64;
-        for i in 0..bit_count {
-            if start_bit + i < self.binary_bits.len() && self.binary_bits[start_bit + i] {
-                value |= 1 << (bit_count - 1 - i);
+        bit_ops::calculate_field_value(&self.bit_string, start_bit, bit_count).unwrap_or(0)
+    }
+
+    /// Parse the current hex input locally.
+    pub fn parse_hex_input_locally(&mut self) {
+        match bit_ops::parse_hex_input(&self.hex_input) {
+            Ok(parsed) => {
+                self.apply_parsed_bit_string(parsed.bit_string, Some(parsed.normalized_hex), false);
+            }
+            Err(error) => {
+                self.clear_derived_views();
+                self.error = Some(error);
             }
         }
-        value
+    }
+
+    /// Parse the current bit-string input locally and synchronize all derived views.
+    pub fn parse_bit_string_input_locally(&mut self) {
+        let trimmed = self.bit_string.trim();
+        if trimmed.is_empty() {
+            self.clear_derived_views();
+            self.error = Some("输入为空".to_string());
+            return;
+        }
+
+        if !trimmed.bytes().all(|b| b == b'0' || b == b'1') {
+            self.error = Some("位串只能包含 0 和 1".to_string());
+            return;
+        }
+
+        self.apply_parsed_bit_string(trimmed.to_string(), None, true);
+    }
+
+    /// Parse the current decimal input locally and synchronize all derived views.
+    pub fn parse_decimal_input_locally(&mut self) {
+        match self.decimal_string_to_bit_string(&self.decimal_input) {
+            Ok(next_bit_string) => {
+                self.apply_parsed_bit_string(next_bit_string, None, true);
+            }
+            Err(error) => {
+                self.error = Some(error);
+            }
+        }
+    }
+
+    /// Apply a bit operation locally and keep all derived views synchronized.
+    pub fn apply_local_operation(&mut self, operation: BitViewerOperation) {
+        let result = match operation {
+            BitViewerOperation::ParseHex => {
+                self.parse_hex_input_locally();
+                return;
+            }
+            BitViewerOperation::ToggleBit(index) => bit_ops::toggle_bit(&self.bit_string, index),
+            BitViewerOperation::InvertAll => bit_ops::invert_all(&self.bit_string),
+            BitViewerOperation::ShiftLeft(count) => {
+                bit_ops::shift_left(&self.bit_string, count, self.current_shift_mode())
+            }
+            BitViewerOperation::ShiftRight(count) => {
+                bit_ops::shift_right(&self.bit_string, count, self.current_shift_mode())
+            }
+        };
+
+        match result {
+            Ok(bit_string) => {
+                self.apply_parsed_bit_string(bit_string, None, true);
+            }
+            Err(error) => {
+                self.error = Some(error);
+            }
+        }
+    }
+
+    fn apply_parsed_bit_string(
+        &mut self,
+        next_bit_string: String,
+        normalized_hex: Option<String>,
+        normalize_hex_input: bool,
+    ) {
+        if self.bit_string != next_bit_string {
+            self.push_undo_state();
+            self.redo_stack.clear();
+        }
+
+        if let Some(normalized_hex) = normalized_hex {
+            self.normalized_hex = normalized_hex;
+        }
+
+        match self.apply_bit_string(next_bit_string) {
+            Ok(()) => {
+                if normalize_hex_input {
+                    self.hex_input = self.normalized_hex.clone();
+                }
+                self.error = None;
+            }
+            Err(error) => {
+                self.error = Some(error);
+            }
+        }
+    }
+
+    fn clear_derived_views(&mut self) {
+        self.normalized_hex.clear();
+        self.decimal_input.clear();
+        self.binary_bits.clear();
+        self.bit_string.clear();
+    }
+
+    /// Restore the previous bit-string state if available.
+    pub fn undo(&mut self) {
+        if let Some(previous) = self.undo_stack.pop() {
+            self.redo_stack.push(self.bit_string.clone());
+            if let Err(error) = self.apply_bit_string(previous) {
+                self.error = Some(error);
+            } else {
+                self.hex_input = self.normalized_hex.clone();
+                self.error = None;
+            }
+        }
+    }
+
+    /// Re-apply the next bit-string state if available.
+    pub fn redo(&mut self) {
+        if let Some(next) = self.redo_stack.pop() {
+            self.undo_stack.push(self.bit_string.clone());
+            if let Err(error) = self.apply_bit_string(next) {
+                self.error = Some(error);
+            } else {
+                self.hex_input = self.normalized_hex.clone();
+                self.error = None;
+            }
+        }
+    }
+
+    fn push_undo_state(&mut self) {
+        if !self.bit_string.is_empty() {
+            self.undo_stack.push(self.bit_string.clone());
+        }
     }
 }
 
@@ -341,8 +579,11 @@ impl FrontendState {
             BackendResponse::BitViewer(resp) => {
                 if self.bit_viewer.pending_id == Some(resp.id) {
                     self.bit_viewer.pending_id = None;
-                    self.bit_viewer.hex_input = resp.hex_input;
+                    self.bit_viewer.hex_input = resp.hex_input.clone();
+                    self.bit_viewer.normalized_hex = resp.hex_input;
                     self.bit_viewer.binary_bits = resp.binary_bits;
+                    self.bit_viewer.bit_string =
+                        bit_ops::bits_to_bit_string(&self.bit_viewer.binary_bits);
                     self.bit_viewer.error = resp.error;
                 }
             }
@@ -464,42 +705,61 @@ impl FrontendState {
 
     /// Request bit viewer to parse hex input.
     pub fn request_bit_viewer_parse(&mut self) {
-        let id = self.backend.next_id();
-        self.bit_viewer.pending_id = Some(id);
-        self.bit_viewer.error = None;
-        self.backend
-            .send_request(BackendRequest::BitViewer(BitViewerRequest {
-                id,
-                operation: BitViewerOperation::ParseHex,
-                hex_input: Some(self.bit_viewer.hex_input.clone()),
-                current_bits: None,
-            }));
+        self.bit_viewer.pending_id = None;
+        self.bit_viewer.parse_hex_input_locally();
     }
 
     /// Request to toggle a single bit.
     pub fn request_bit_toggle(&mut self, index: usize) {
-        let id = self.backend.next_id();
-        self.bit_viewer.pending_id = Some(id);
-        self.backend
-            .send_request(BackendRequest::BitViewer(BitViewerRequest {
-                id,
-                operation: BitViewerOperation::ToggleBit(index),
-                hex_input: None,
-                current_bits: Some(self.bit_viewer.binary_bits.clone()),
-            }));
+        self.apply_local_bit_viewer_operation(BitViewerOperation::ToggleBit(index));
     }
 
     /// Request to invert all bits.
     pub fn request_bit_invert_all(&mut self) {
-        let id = self.backend.next_id();
-        self.bit_viewer.pending_id = Some(id);
-        self.backend
-            .send_request(BackendRequest::BitViewer(BitViewerRequest {
-                id,
-                operation: BitViewerOperation::InvertAll,
-                hex_input: None,
-                current_bits: Some(self.bit_viewer.binary_bits.clone()),
-            }));
+        self.apply_local_bit_viewer_operation(BitViewerOperation::InvertAll);
+    }
+
+    /// Request to shift bits left.
+    pub fn request_bit_shift_left(&mut self) {
+        self.apply_local_bit_viewer_operation(BitViewerOperation::ShiftLeft(
+            self.bit_viewer.shift_count,
+        ));
+    }
+
+    /// Request to shift bits right.
+    pub fn request_bit_shift_right(&mut self) {
+        self.apply_local_bit_viewer_operation(BitViewerOperation::ShiftRight(
+            self.bit_viewer.shift_count,
+        ));
+    }
+
+    fn apply_local_bit_viewer_operation(&mut self, operation: BitViewerOperation) {
+        self.bit_viewer.pending_id = None;
+        self.bit_viewer.apply_local_operation(operation);
+    }
+
+    /// Undo the last bit viewer operation.
+    pub fn request_bit_undo(&mut self) {
+        self.bit_viewer.pending_id = None;
+        self.bit_viewer.undo();
+    }
+
+    /// Redo the last undone bit viewer operation.
+    pub fn request_bit_redo(&mut self) {
+        self.bit_viewer.pending_id = None;
+        self.bit_viewer.redo();
+    }
+
+    /// Parse the current bit viewer bit-string input locally.
+    pub fn request_bit_string_parse(&mut self) {
+        self.bit_viewer.pending_id = None;
+        self.bit_viewer.parse_bit_string_input_locally();
+    }
+
+    /// Parse the current bit viewer decimal input locally.
+    pub fn request_bit_decimal_parse(&mut self) {
+        self.bit_viewer.pending_id = None;
+        self.bit_viewer.parse_decimal_input_locally();
     }
 
     /// Request calculator evaluation.
@@ -668,5 +928,193 @@ impl FrontendState {
 impl Default for FrontendState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::BitViewerOperation;
+
+    #[test]
+    fn bit_viewer_local_parse_updates_all_views() {
+        let mut state = BitViewerState {
+            hex_input: "a1 b2".to_string(),
+            ..Default::default()
+        };
+
+        state.parse_hex_input_locally();
+
+        assert_eq!(state.normalized_hex, "A1B2");
+        assert_eq!(state.hex_input, "a1 b2");
+        assert_eq!(state.bit_string, "1010000110110010");
+        assert_eq!(
+            state.binary_bits,
+            vec![
+                true, false, true, false, false, false, false, true, true, false, true, true,
+                false, false, true, false,
+            ]
+        );
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_local_parse_clears_derived_state_on_error() {
+        let mut state = BitViewerState {
+            hex_input: "FF".to_string(),
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.hex_input = "GG".to_string();
+        state.parse_hex_input_locally();
+
+        assert!(state.normalized_hex.is_empty());
+        assert!(state.bit_string.is_empty());
+        assert!(state.binary_bits.is_empty());
+        assert!(state.error.is_some());
+    }
+
+    #[test]
+    fn bit_viewer_shift_left_zero_fill_clears_shifted_out_bits() {
+        let mut state = BitViewerState {
+            hex_input: "B".to_string(),
+            zero_fill_shift: true,
+            shift_count_input: "1".to_string(),
+            shift_count: 1,
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.apply_local_operation(BitViewerOperation::ShiftLeft(1));
+
+        assert_eq!(state.bit_string, "0110");
+        assert_eq!(state.normalized_hex, "6");
+        assert_eq!(state.hex_input, "6");
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_shift_left_rotate_preserves_shifted_out_bits() {
+        let mut state = BitViewerState {
+            hex_input: "B".to_string(),
+            zero_fill_shift: false,
+            shift_count_input: "1".to_string(),
+            shift_count: 1,
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.apply_local_operation(BitViewerOperation::ShiftLeft(1));
+
+        assert_eq!(state.bit_string, "0111");
+        assert_eq!(state.normalized_hex, "7");
+        assert_eq!(state.hex_input, "7");
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_shift_right_rotate_uses_current_mode() {
+        let mut state = BitViewerState {
+            hex_input: "B".to_string(),
+            zero_fill_shift: false,
+            shift_count_input: "2".to_string(),
+            shift_count: 2,
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.apply_local_operation(BitViewerOperation::ShiftRight(2));
+
+        assert_eq!(state.bit_string, "1110");
+        assert_eq!(state.normalized_hex, "E");
+        assert_eq!(state.hex_input, "E");
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_decimal_parse_updates_hex_and_bits() {
+        let mut state = BitViewerState {
+            hex_input: "0F".to_string(),
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.decimal_input = "10".to_string();
+        state.parse_decimal_input_locally();
+
+        assert_eq!(state.bit_string, "00001010");
+        assert_eq!(state.normalized_hex, "0A");
+        assert_eq!(state.hex_input, "0A");
+        assert_eq!(state.decimal_input, "10");
+        assert_eq!(state.binary_bits.len(), 8);
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_bit_string_parse_updates_hex_and_decimal() {
+        let mut state = BitViewerState {
+            bit_string: "10101100".to_string(),
+            ..Default::default()
+        };
+
+        state.parse_bit_string_input_locally();
+
+        assert_eq!(state.normalized_hex, "AC");
+        assert_eq!(state.decimal_input, "172");
+        assert_eq!(
+            state.binary_bits,
+            vec![true, false, true, false, true, true, false, false]
+        );
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_bit_string_parse_rejects_invalid_characters() {
+        let mut state = BitViewerState {
+            bit_string: "10A1".to_string(),
+            ..Default::default()
+        };
+
+        state.parse_bit_string_input_locally();
+
+        assert!(state.error.is_some());
+    }
+
+    #[test]
+    fn bit_viewer_decimal_parse_rejects_overflow_for_current_width() {
+        let mut state = BitViewerState {
+            hex_input: "0F".to_string(),
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.decimal_input = "16".to_string();
+        state.parse_decimal_input_locally();
+
+        assert_eq!(state.bit_string, "00010000");
+        assert_eq!(state.normalized_hex, "10");
+        assert_eq!(state.hex_input, "10");
+        assert_eq!(state.binary_bits.len(), 8);
+        assert!(state.error.is_none());
+    }
+
+    #[test]
+    fn bit_viewer_decimal_parse_preserves_current_bit_width() {
+        let mut state = BitViewerState {
+            hex_input: "00FF".to_string(),
+            ..Default::default()
+        };
+        state.parse_hex_input_locally();
+
+        state.decimal_input = "10".to_string();
+        state.parse_decimal_input_locally();
+
+        assert_eq!(state.bit_string, "0000000000001010");
+        assert_eq!(state.normalized_hex, "000A");
+        assert_eq!(state.hex_input, "000A");
+        assert_eq!(state.binary_bits.len(), 16);
+        assert_eq!(state.decimal_input, "10");
+        assert!(state.error.is_none());
     }
 }

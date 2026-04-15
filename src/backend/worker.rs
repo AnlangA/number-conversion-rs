@@ -4,7 +4,7 @@ use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::thread::{self, JoinHandle};
 
 use super::messages::*;
-use crate::core::calc_engine;
+use crate::core::{bit_ops, calc_engine};
 
 /// Backend processor that handles all computation requests.
 pub struct BackendWorker;
@@ -229,105 +229,80 @@ impl BackendWorker {
         match req.operation {
             BitViewerOperation::ParseHex => {
                 let hex_input = req.hex_input.unwrap_or_default();
-                let clean_hex: String = hex_input
-                    .chars()
-                    .filter(|c| c.is_ascii_hexdigit())
-                    .collect::<String>()
-                    .to_uppercase();
-
-                if clean_hex.is_empty() {
-                    return BitViewerResponse {
+                match bit_ops::parse_hex_input(&hex_input) {
+                    Ok(parsed) => BitViewerResponse {
                         id: req.id,
-                        hex_input: String::new(),
-                        binary_bits: Vec::new(),
-                        error: Some("输入为空".to_string()),
-                    };
-                }
-
-                // Validate hex characters
-                if !clean_hex.chars().all(|c| c.is_ascii_hexdigit()) {
-                    return BitViewerResponse {
+                        hex_input: parsed.normalized_hex,
+                        binary_bits: bit_ops::bit_string_to_bits(&parsed.bit_string)
+                            .unwrap_or_default(),
+                        error: None,
+                    },
+                    Err(error) => BitViewerResponse {
                         id: req.id,
                         hex_input,
                         binary_bits: Vec::new(),
-                        error: Some("无效的十六进制字符".to_string()),
-                    };
-                }
-
-                let mut binary_bits = Vec::new();
-                for hex_char in clean_hex.chars() {
-                    if let Some(digit) = hex_char.to_digit(16) {
-                        let digit = digit as u8;
-                        for i in (0..4).rev() {
-                            binary_bits.push((digit & (1 << i)) != 0);
-                        }
-                    }
-                }
-
-                BitViewerResponse {
-                    id: req.id,
-                    hex_input: clean_hex,
-                    binary_bits,
-                    error: None,
+                        error: Some(error),
+                    },
                 }
             }
             BitViewerOperation::ToggleBit(index) => {
-                let mut bits = req.current_bits.unwrap_or_default();
-                if index < bits.len() {
-                    bits[index] = !bits[index];
-                }
-                let hex_input = Self::bits_to_hex(&bits);
+                let current_bits = req.current_bits.unwrap_or_default();
+                let bit_string = bit_ops::bits_to_bit_string(&current_bits);
+                let updated_bit_string =
+                    bit_ops::toggle_bit(&bit_string, index).unwrap_or(bit_string);
 
                 BitViewerResponse {
                     id: req.id,
-                    hex_input,
-                    binary_bits: bits,
+                    hex_input: bit_ops::bit_string_to_hex(&updated_bit_string).unwrap_or_default(),
+                    binary_bits: bit_ops::bit_string_to_bits(&updated_bit_string)
+                        .unwrap_or_default(),
                     error: None,
                 }
             }
             BitViewerOperation::InvertAll => {
-                let mut bits = req.current_bits.unwrap_or_default();
-                for bit in &mut bits {
-                    *bit = !*bit;
-                }
-                let hex_input = Self::bits_to_hex(&bits);
+                let current_bits = req.current_bits.unwrap_or_default();
+                let bit_string = bit_ops::bits_to_bit_string(&current_bits);
+                let updated_bit_string = bit_ops::invert_all(&bit_string).unwrap_or(bit_string);
 
                 BitViewerResponse {
                     id: req.id,
-                    hex_input,
-                    binary_bits: bits,
+                    hex_input: bit_ops::bit_string_to_hex(&updated_bit_string).unwrap_or_default(),
+                    binary_bits: bit_ops::bit_string_to_bits(&updated_bit_string)
+                        .unwrap_or_default(),
+                    error: None,
+                }
+            }
+            BitViewerOperation::ShiftLeft(count) => {
+                let current_bits = req.current_bits.unwrap_or_default();
+                let bit_string = bit_ops::bits_to_bit_string(&current_bits);
+                let updated_bit_string =
+                    bit_ops::shift_left(&bit_string, count, bit_ops::ShiftMode::ZeroFill)
+                        .unwrap_or(bit_string);
+
+                BitViewerResponse {
+                    id: req.id,
+                    hex_input: bit_ops::bit_string_to_hex(&updated_bit_string).unwrap_or_default(),
+                    binary_bits: bit_ops::bit_string_to_bits(&updated_bit_string)
+                        .unwrap_or_default(),
+                    error: None,
+                }
+            }
+            BitViewerOperation::ShiftRight(count) => {
+                let current_bits = req.current_bits.unwrap_or_default();
+                let bit_string = bit_ops::bits_to_bit_string(&current_bits);
+                let updated_bit_string =
+                    bit_ops::shift_right(&bit_string, count, bit_ops::ShiftMode::ZeroFill)
+                        .unwrap_or(bit_string);
+
+                BitViewerResponse {
+                    id: req.id,
+                    hex_input: bit_ops::bit_string_to_hex(&updated_bit_string).unwrap_or_default(),
+                    binary_bits: bit_ops::bit_string_to_bits(&updated_bit_string)
+                        .unwrap_or_default(),
                     error: None,
                 }
             }
         }
-    }
-
-    fn bits_to_hex(bits: &[bool]) -> String {
-        if bits.is_empty() {
-            return String::new();
-        }
-
-        let mut hex_string = String::new();
-        let mut current_nibble = 0u8;
-
-        for (i, &bit) in bits.iter().enumerate() {
-            let bit_pos = 3 - (i % 4);
-            if bit {
-                current_nibble |= 1 << bit_pos;
-            }
-
-            if (i + 1) % 4 == 0 {
-                hex_string.push_str(&format!("{:X}", current_nibble));
-                current_nibble = 0;
-            }
-        }
-
-        // Handle incomplete last nibble
-        if !bits.len().is_multiple_of(4) {
-            hex_string.push_str(&format!("{:X}", current_nibble));
-        }
-
-        hex_string
     }
 
     fn handle_calculator(req: CalculatorRequest) -> CalculatorResponse {

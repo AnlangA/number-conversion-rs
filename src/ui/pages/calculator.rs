@@ -139,6 +139,15 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
             ui.label("• 表达式支持 + - * / % ^ 和括号 ()，以及函数名/常量（如 sin、cos、pi）");
             ui.label("• 在所选进制下输入数字，程序会在计算前自动转换为十进制交给 SymPy 计算");
             ui.label("• 计算后会将结果转换回所选进制显示（支持小数，保留符号）");
+            ui.separator();
+            ui.label("环境依赖说明：");
+            ui.label("• 计算功能依赖 Python 和 `sympy` 包");
+            ui.label("• 如果提示“未找到可用的 Python 解释器”，请先安装 Python 3，并确保 `python`、`python3` 或 `py` 命令可用");
+            ui.label("• Windows 用户安装 Python 时，建议勾选“Add Python to PATH”");
+            ui.label("• 如果提示“当前 Python 环境缺少 `sympy` 依赖”，请执行：python -m pip install sympy");
+            ui.label("• Windows 也可以执行：py -m pip install sympy");
+            ui.label("• 如果你使用项目虚拟环境，请执行：.venv\\Scripts\\python -m pip install sympy");
+            ui.label("• 安装或修复环境后，请重新启动程序再试");
         });
     });
 }

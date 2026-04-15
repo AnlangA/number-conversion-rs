@@ -5,13 +5,20 @@ use eframe::egui::{self, Align2, Color32, FontId, RichText, Sense, Stroke, TextE
 
 /// Render the bit viewer page.
 pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
+    let has_bits = frontend.bit_viewer.has_bits();
+    let shift_mode_label = if frontend.bit_viewer.zero_fill_shift {
+        "逻辑移位"
+    } else {
+        "循环移位"
+    };
+
     // Input area
     ui.horizontal(|ui| {
-        ui.label(RichText::new("十六进制数据:").color(Color32::BLUE));
+        ui.label(RichText::new("十六进制输入:").color(Color32::BLUE));
         let response = ui.add(
             TextEdit::singleline(&mut frontend.bit_viewer.hex_input)
                 .desired_width(300.0)
-                .hint_text("输入十六进制数据，如: A1B2C3"),
+                .hint_text("输入十六进制数据，例如 A1B2C3D4"),
         );
 
         if response.changed() {
@@ -19,9 +26,7 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
         }
 
         if ui.button("清除").clicked() {
-            frontend.bit_viewer.hex_input.clear();
-            frontend.bit_viewer.binary_bits.clear();
-            frontend.bit_viewer.error = None;
+            frontend.bit_viewer.clear_data();
         }
 
         if ui.button("示例").clicked() {
@@ -29,24 +34,76 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
             frontend.request_bit_viewer_parse();
         }
 
-        // Invert button
-        let invert_enabled = !frontend.bit_viewer.binary_bits.is_empty();
+        let undo_button = ui
+            .add_enabled(frontend.bit_viewer.can_undo(), egui::Button::new("撤销"))
+            .on_hover_text("恢复到上一次位操作之前的状态");
+
+        if undo_button.clicked() {
+            frontend.request_bit_undo();
+        }
+
+        let redo_button = ui
+            .add_enabled(frontend.bit_viewer.can_redo(), egui::Button::new("重做"))
+            .on_hover_text("重新应用刚刚撤销的位操作");
+
+        if redo_button.clicked() {
+            frontend.request_bit_redo();
+        }
+
         let invert_button = ui
-            .add_enabled(invert_enabled, egui::Button::new("按位取反"))
-            .on_hover_text("将所有位进行按位取反操作 (0→1, 1→0)");
+            .add_enabled(has_bits, egui::Button::new("按位取反"))
+            .on_hover_text("将当前所有位翻转：0 变 1，1 变 0");
 
         if invert_button.clicked() {
             frontend.request_bit_invert_all();
         }
     });
 
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("位串输入:").color(Color32::BLUE));
+        let response = ui.add(
+            TextEdit::singleline(&mut frontend.bit_viewer.bit_string)
+                .desired_width(420.0)
+                .hint_text("直接输入位串，例如 10101100"),
+        );
+
+        if response.changed() {
+            frontend.request_bit_string_parse();
+        }
+    });
+
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("十进制输入:").color(Color32::BLUE));
+        let response = ui.add(
+            TextEdit::singleline(&mut frontend.bit_viewer.decimal_input)
+                .desired_width(220.0)
+                .hint_text("输入无符号十进制数值"),
+        );
+
+        if response.changed() {
+            frontend.request_bit_decimal_parse();
+        }
+
+        if has_bits {
+            ui.separator();
+            ui.label(
+                RichText::new(format!(
+                    "当前位宽：{} 位，十进制值：{}",
+                    frontend.bit_viewer.binary_bits.len(),
+                    frontend.bit_viewer.decimal_input
+                ))
+                .color(Color32::DARK_GRAY),
+            );
+        }
+    });
+
     // Field width input
     ui.horizontal(|ui| {
-        ui.label(RichText::new("字段位数:").color(Color32::BLUE));
+        ui.label(RichText::new("字段分组:").color(Color32::BLUE));
         let response = ui.add(
             TextEdit::singleline(&mut frontend.bit_viewer.field_widths_input)
                 .desired_width(300.0)
-                .hint_text("输入字段位数，用空格分隔，如: 4 8 4"),
+                .hint_text("使用空格分隔每组位数，例如 4 8 4"),
         );
 
         if response.changed() {
@@ -54,13 +111,59 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
         }
     });
 
-    // Pending indicator
-    if frontend.bit_viewer.pending_id.is_some() {
-        ui.horizontal(|ui| {
-            ui.spinner();
-            ui.label("处理中...");
-        });
-    }
+    // Shift controls
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("移位设置:").color(Color32::BLUE));
+        let response = ui.add(
+            TextEdit::singleline(&mut frontend.bit_viewer.shift_count_input)
+                .desired_width(80.0)
+                .hint_text("位数"),
+        );
+
+        if response.changed() {
+            frontend.bit_viewer.parse_shift_count();
+        }
+
+        ui.checkbox(&mut frontend.bit_viewer.zero_fill_shift, "超出位清零")
+            .on_hover_text("开启后使用逻辑移位，移出范围的位会被丢弃并补 0；关闭后使用循环移位");
+
+        let left_shift_button = ui
+            .add_enabled(has_bits, egui::Button::new("左移"))
+            .on_hover_text(if frontend.bit_viewer.zero_fill_shift {
+                "向左移动指定位数，右侧空位补 0"
+            } else {
+                "向左循环移动指定位数，移出的高位回到低位"
+            });
+
+        if left_shift_button.clicked() {
+            frontend.request_bit_shift_left();
+        }
+
+        let right_shift_button = ui
+            .add_enabled(has_bits, egui::Button::new("右移"))
+            .on_hover_text(if frontend.bit_viewer.zero_fill_shift {
+                "向右移动指定位数，左侧空位补 0"
+            } else {
+                "向右循环移动指定位数，移出的低位回到高位"
+            });
+
+        if right_shift_button.clicked() {
+            frontend.request_bit_shift_right();
+        }
+
+        if has_bits {
+            ui.separator();
+            ui.label(
+                RichText::new(format!(
+                    "当前共 {} 位，本次移动 {} 位，模式：{}",
+                    frontend.bit_viewer.binary_bits.len(),
+                    frontend.bit_viewer.shift_count,
+                    shift_mode_label
+                ))
+                .color(Color32::DARK_GRAY),
+            );
+        }
+    });
 
     ui.separator();
 
@@ -75,14 +178,14 @@ pub fn render(ui: &mut Ui, frontend: &mut FrontendState) {
     }
 
     // Display title
-    ui.label(RichText::new("二进制位 (从高位到低位):").color(Color32::DARK_GREEN));
+    ui.label(RichText::new("位图预览（从高位到低位）:").color(Color32::DARK_GREEN));
 
     // Calculate field groups
     let field_groups = frontend.bit_viewer.calculate_field_groups();
 
     // Calculate scroll area height
     let available_height = ui.available_height();
-    let scroll_height = (available_height - 120.0).max(200.0);
+    let scroll_height = (available_height - 150.0).max(220.0);
 
     // Display bit fields
     egui::ScrollArea::vertical()
@@ -273,29 +376,33 @@ fn render_bit_button(ui: &mut Ui, _bit_index: usize, bit_value: bool) -> egui::R
 }
 
 fn display_statistics(ui: &mut Ui, bits: &[bool]) {
-    ui.label(RichText::new("统计信息:").color(Color32::DARK_GREEN));
+    ui.label(
+        RichText::new("统计信息:")
+            .color(Color32::DARK_GREEN)
+            .strong(),
+    );
 
     let total_bits = bits.len();
     let ones_count = bits.iter().filter(|&&bit| bit).count();
     let zeros_count = total_bits - ones_count;
 
     ui.horizontal(|ui| {
-        ui.label(format!("总位数: {}", total_bits));
+        ui.label(format!("总位数：{}", total_bits));
         ui.separator();
-        ui.label(format!("1的个数: {}", ones_count));
+        ui.label(format!("1 的个数：{}", ones_count));
         ui.separator();
-        ui.label(format!("0的个数: {}", zeros_count));
+        ui.label(format!("0 的个数：{}", zeros_count));
     });
 
     if total_bits > 0 {
         ui.horizontal(|ui| {
             ui.label(format!(
-                "1的比例: {:.1}%",
+                "1 的占比：{:.1}%",
                 (ones_count as f32 / total_bits as f32) * 100.0
             ));
             ui.separator();
             ui.label(format!(
-                "0的比例: {:.1}%",
+                "0 的占比：{:.1}%",
                 (zeros_count as f32 / total_bits as f32) * 100.0
             ));
         });

@@ -162,6 +162,10 @@ pub enum BitViewerOperation {
     ToggleBit(usize),
     /// Invert all bits
     InvertAll,
+    /// Shift all bits to the left by the given count
+    ShiftLeft(usize),
+    /// Shift all bits to the right by the given count
+    ShiftRight(usize),
 }
 
 /// Bit viewer request.
@@ -173,7 +177,7 @@ pub struct BitViewerRequest {
     pub operation: BitViewerOperation,
     /// Hex input (for ParseHex)
     pub hex_input: Option<String>,
-    /// Current binary bits (for ToggleBit/InvertAll)
+    /// Current binary bits (for bit operations)
     pub current_bits: Option<Vec<bool>>,
 }
 
